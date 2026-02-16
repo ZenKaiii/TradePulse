@@ -1,6 +1,7 @@
 from tradepulse.notifiers.dingtalk import build_payload as build_dingtalk_payload
 from tradepulse.notifiers.feishu import build_payload as build_feishu_payload
 from tradepulse.notifiers.telegram import build_payload as build_telegram_payload
+from tradepulse.notifiers import telegram as telegram_notifier
 
 
 def test_dingtalk_payload_contains_text():
@@ -14,6 +15,20 @@ def test_telegram_payload_contains_text():
     payload = build_telegram_payload("bot-token", "chat-id", "hello")
     assert payload["url"].endswith("/sendMessage")
     assert payload["json"]["text"] == "hello"
+
+
+def test_telegram_send_splits_long_message(monkeypatch):
+    sent_texts = []
+
+    def _fake_post(url, payload):
+        sent_texts.append(payload["text"])
+
+    monkeypatch.setattr(telegram_notifier, "_post_json", _fake_post)
+    very_long = "\n".join([f"line-{idx}" for idx in range(1200)])
+    telegram_notifier.send("bot-token", "chat-id", very_long)
+
+    assert len(sent_texts) >= 2
+    assert all(len(item) <= 3500 for item in sent_texts)
 
 
 def test_feishu_payload_contains_text():

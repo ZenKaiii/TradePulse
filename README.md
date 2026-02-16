@@ -135,6 +135,7 @@ If `TRADEPULSE_CHANNELS` is empty, TradePulse auto-detects channels from credent
   - Create bot with BotFather and get token (`TELEGRAM_BOT_TOKEN`).
   - Add bot to target chat/group.
   - Fetch `chat_id` via Telegram Bot API and set `TELEGRAM_CHAT_ID`.
+  - Long digests are auto-split into multiple Telegram messages to avoid length-limit drops.
 - Feishu:
   - Create custom bot and copy webhook URL to `FEISHU_WEBHOOK_URL`.
 

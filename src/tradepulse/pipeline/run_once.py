@@ -245,6 +245,8 @@ def run_once(dry_run: bool = False) -> Dict:
     channels = resolve_channels(config.delivery.channels)
     if not dry_run:
         errors = send_best_effort(_collect_senders(digest, channels))
+        for err in errors:
+            print(f"[tradepulse][delivery] {err}")
 
     return {
         "digest": digest,

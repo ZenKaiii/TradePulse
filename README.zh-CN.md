@@ -133,6 +133,7 @@ cp config/user.example.yaml config/user.yaml
   - 通过 BotFather 创建机器人并拿到 `TELEGRAM_BOT_TOKEN`。
   - 把机器人拉入目标群/频道。
   - 通过 Bot API 获取 `chat_id`，配置到 `TELEGRAM_CHAT_ID`。
+  - 超长快报会自动拆分为多条 Telegram 消息，避免因长度限制导致发送失败。
 - 飞书：
   - 创建自定义机器人，复制 webhook 到 `FEISHU_WEBHOOK_URL`。
 
