@@ -39,11 +39,11 @@ class MarketRegimeConfig:
     us_top_n: int = 3
     us_stock_flow_top_n: int = 5
     us_market_flow_enabled: bool = True
-    us_market_flow_top_n: int = 10
-    us_market_flow_universe_size: int = 30
+    us_market_flow_top_n: int = 20
+    us_market_flow_universe_size: int = 300
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
-    sec_enabled: bool = True
+    sec_enabled: bool = False
     sec_13f_ciks: List[str] = field(
         default_factory=lambda: [
             "0001067983",
@@ -62,7 +62,7 @@ class LLMConfig:
     enabled: bool = True
     provider: str = "auto"
     detail_top_n: int = 5
-    timeout_sec: float = 45.0
+    timeout_sec: float = 90.0
     max_retries: int = 1
     retry_backoff_sec: float = 1.0
     temperature: float = 0.2
@@ -249,7 +249,7 @@ def load_user_config(path: Path) -> UserConfig:
             enabled=_as_bool(llm_raw.get("enabled"), True),
             provider=str(llm_raw.get("provider", "auto")).strip().lower() or "auto",
             detail_top_n=max(0, min(int(llm_raw.get("detail_top_n", 5)), 20)),
-            timeout_sec=max(5.0, min(float(llm_raw.get("timeout_sec", 45.0)), 240.0)),
+            timeout_sec=max(5.0, min(float(llm_raw.get("timeout_sec", 90.0)), 240.0)),
             max_retries=max(0, min(int(llm_raw.get("max_retries", 1)), 5)),
             retry_backoff_sec=max(0.2, min(float(llm_raw.get("retry_backoff_sec", 1.0)), 10.0)),
             temperature=max(0.0, min(float(llm_raw.get("temperature", 0.2)), 2.0)),

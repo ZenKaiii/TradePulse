@@ -1,9 +1,11 @@
-name: TradePulse Hourly Digest
+name: TradePulse Daily Digest
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 9 * * *"
+    - cron: "0 15 * * *"
+    - cron: "0 22 * * *"
 
 jobs:
   run-hourly:
@@ -48,6 +50,9 @@ jobs:
           TRADEPULSE_MARKET_A_SHARE_ENABLED: ${{ vars.TRADEPULSE_MARKET_A_SHARE_ENABLED }}
           TRADEPULSE_MARKET_US_TOP_N: ${{ vars.TRADEPULSE_MARKET_US_TOP_N }}
           TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N: ${{ vars.TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N }}
+          TRADEPULSE_MARKET_US_MARKET_FLOW_ENABLED: ${{ vars.TRADEPULSE_MARKET_US_MARKET_FLOW_ENABLED }}
+          TRADEPULSE_MARKET_US_MARKET_FLOW_TOP_N: ${{ vars.TRADEPULSE_MARKET_US_MARKET_FLOW_TOP_N }}
+          TRADEPULSE_MARKET_US_MARKET_FLOW_UNIVERSE_SIZE: ${{ vars.TRADEPULSE_MARKET_US_MARKET_FLOW_UNIVERSE_SIZE }}
           TRADEPULSE_MARKET_A_SHARE_TOP_N: ${{ vars.TRADEPULSE_MARKET_A_SHARE_TOP_N }}
           TRADEPULSE_MARKET_TIMEOUT_SEC: ${{ vars.TRADEPULSE_MARKET_TIMEOUT_SEC }}
           TRADEPULSE_MARKET_SEC_ENABLED: ${{ vars.TRADEPULSE_MARKET_SEC_ENABLED }}

@@ -27,6 +27,8 @@ A_SHARE_FLOW_URL = (
     "&fields=f12,f14,f2,f3,f62,f184"
 )
 SEC_COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
+NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt"
+OTHER_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt"
 DEFAULT_SEC_13F_CIKS = [
     "0001067983",  # Berkshire Hathaway
     "0001350694",  # Bridgewater Associates
@@ -34,14 +36,6 @@ DEFAULT_SEC_13F_CIKS = [
     "0001649339",  # Scion Asset Management
     "0001167483",  # Tiger Global
     "0001423053",  # Citadel Advisors
-]
-
-US_HIGH_LIQUIDITY_STOCKS = [
-    "AAPL", "MSFT", "NVDA", "GOOGL", "GOOG", "AMZN", "META", "TSLA", "BRK.B", "JNJ",
-    "V", "UNH", "XOM", "JPM", "PG", "MA", "HD", "CVX", "MRK", "ABBV",
-    "LLY", "PEP", "KO", "COST", "AVGO", "TMO", "MCD", "CSCO", "ACN", "DIS",
-    "WMT", "ABT", "DHR", "ADBE", "CRM", "TXN", "VZ", "NKE", "NEE", "PM",
-    "INTC", "AMD", "QCOM", "INTU", "AMAT", "BKNG", "ISRG", "GILD", "MDLZ", "ADP",
 ]
 
 
@@ -52,11 +46,13 @@ class MarketRegimeOptions:
     a_share_enabled: bool = True
     us_top_n: int = 3
     us_stock_flow_top_n: int = 5
-    us_market_flow_universe_size: int = 50
+    us_market_flow_enabled: bool = True
+    us_market_flow_top_n: int = 20
+    us_market_flow_universe_size: int = 300
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
     stock_universe: List[str] = field(default_factory=list)
-    sec_enabled: bool = True
+    sec_enabled: bool = False
     sec_13f_ciks: List[str] = field(default_factory=lambda: list(DEFAULT_SEC_13F_CIKS))
     sec_user_agent: str = "TradePulse/0.1 (contact: tradepulse@example.com)"
 
@@ -289,6 +285,38 @@ def parse_a_share_flow(payload: Dict[str, Any], top_n: int = 5) -> Dict[str, Lis
     return {"inflow": inflow, "outflow": outflow}
 
 
+def fetch_nasdaq_symbols(timeout_sec: float) -> List[str]:
+    symbols = []
+    
+    try:
+        response = httpx.get(NASDAQ_LISTED_URL, timeout=timeout_sec)
+        response.raise_for_status()
+        lines = response.text.strip().split('\n')
+        for line in lines[1:]:
+            parts = line.split('|')
+            if len(parts) >= 2:
+                symbol = parts[0].strip()
+                if symbol and symbol.isalpha():
+                    symbols.append(symbol)
+    except Exception as exc:
+        print(f"[tradepulse][market] NASDAQ listed fetch failed: {exc}")
+    
+    try:
+        response = httpx.get(OTHER_LISTED_URL, timeout=timeout_sec)
+        response.raise_for_status()
+        lines = response.text.strip().split('\n')
+        for line in lines[1:]:
+            parts = line.split('|')
+            if len(parts) >= 2:
+                symbol = parts[0].strip()
+                if symbol and symbol.isalpha():
+                    symbols.append(symbol)
+    except Exception as exc:
+        print(f"[tradepulse][market] Other listed fetch failed: {exc}")
+    
+    return list(set(symbols))[:500]
+
+
 def _normalize_cik(value: str) -> str:
     digits = "".join(char for char in str(value or "") if char.isdigit())
     return digits.zfill(10) if digits else ""
@@ -482,16 +510,17 @@ def build_market_regime_snapshot(
                 us_snapshot["stock_flow"] = {"inflow": [], "outflow": []}
 
             try:
-                market_symbols = US_HIGH_LIQUIDITY_STOCKS[:options.us_market_flow_universe_size]
-                market_stock_flow_map = _fetch_us_flow_map(
-                    symbols=market_symbols,
-                    timeout_sec=options.request_timeout_sec,
-                    flow_fetcher=us_flow_fetcher,
-                )
-                us_snapshot["market_stock_flow"] = compute_us_flow_proxy_rankings(
-                    market_stock_flow_map,
-                    top_n=options.us_stock_flow_top_n,
-                )
+                if options.us_market_flow_enabled:
+                    market_symbols = fetch_nasdaq_symbols(options.request_timeout_sec)[:options.us_market_flow_universe_size]
+                    market_stock_flow_map = _fetch_us_flow_map(
+                        symbols=market_symbols,
+                        timeout_sec=options.request_timeout_sec,
+                        flow_fetcher=us_flow_fetcher,
+                    )
+                    us_snapshot["market_stock_flow"] = compute_us_flow_proxy_rankings(
+                        market_stock_flow_map,
+                        top_n=options.us_market_flow_top_n,
+                    )
             except Exception:
                 us_snapshot["market_stock_flow"] = {"inflow": [], "outflow": []}
 

@@ -122,7 +122,7 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_LLM_ENABLED` | 可选 | 是否启用 LLM 解读 | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | 可选 | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | 可选 | 详细解读条数 | `5` |
-| `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时（思考模型建议45秒以上） | `45` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时（思考模型建议90秒以上） | `90` |
 | `TRADEPULSE_LLM_MAX_RETRIES` | 可选 | LLM 最大重试次数(0-5) | `1` |
 | `TRADEPULSE_LLM_RETRY_BACKOFF_SEC` | 可选 | LLM 重试退避秒数(0.2-10) | `1.0` |
 | `TRADEPULSE_LLM_TEMPERATURE` | 可选 | LLM 温度参数 | `0.2` |

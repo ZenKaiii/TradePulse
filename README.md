@@ -124,7 +124,7 @@ Notes:
 | `TRADEPULSE_LLM_ENABLED` | Optional | Enable LLM analysis | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | Optional | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | Optional | Detailed analysis rows | `5` |
-| `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout (5-240 sec, recommended 45+ for thinking models) | `45` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout (5-240 sec, recommended 90s for thinking models) | `90` |
 | `TRADEPULSE_LLM_MAX_RETRIES` | Optional | LLM max retries (0-5) | `1` |
 | `TRADEPULSE_LLM_RETRY_BACKOFF_SEC` | Optional | LLM retry backoff seconds (0.2-10) | `1.0` |
 | `TRADEPULSE_LLM_TEMPERATURE` | Optional | LLM temperature | `0.2` |
