@@ -38,6 +38,9 @@ class MarketRegimeConfig:
     a_share_enabled: bool = True
     us_top_n: int = 3
     us_stock_flow_top_n: int = 5
+    us_market_flow_enabled: bool = True
+    us_market_flow_top_n: int = 10
+    us_market_flow_universe_size: int = 30
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
     sec_enabled: bool = True
@@ -59,7 +62,9 @@ class LLMConfig:
     enabled: bool = True
     provider: str = "auto"
     detail_top_n: int = 5
-    timeout_sec: float = 20.0
+    timeout_sec: float = 45.0
+    max_retries: int = 1
+    retry_backoff_sec: float = 1.0
     temperature: float = 0.2
     bailian_model: str = "qwen3.5-plus"
     bailian_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -211,6 +216,9 @@ def load_user_config(path: Path) -> UserConfig:
             a_share_enabled=_as_bool(market_raw.get("a_share_enabled"), True),
             us_top_n=max(1, min(int(market_raw.get("us_top_n", 3)), 10)),
             us_stock_flow_top_n=max(1, min(int(market_raw.get("us_stock_flow_top_n", 5)), 20)),
+            us_market_flow_enabled=_as_bool(market_raw.get("us_market_flow_enabled"), True),
+            us_market_flow_top_n=max(1, min(int(market_raw.get("us_market_flow_top_n", 10)), 30)),
+            us_market_flow_universe_size=max(10, min(int(market_raw.get("us_market_flow_universe_size", 30)), 100)),
             a_share_top_n=max(1, min(int(market_raw.get("a_share_top_n", 5)), 20)),
             request_timeout_sec=max(
                 1.0,
@@ -241,7 +249,9 @@ def load_user_config(path: Path) -> UserConfig:
             enabled=_as_bool(llm_raw.get("enabled"), True),
             provider=str(llm_raw.get("provider", "auto")).strip().lower() or "auto",
             detail_top_n=max(0, min(int(llm_raw.get("detail_top_n", 5)), 20)),
-            timeout_sec=max(1.0, min(float(llm_raw.get("timeout_sec", 20.0)), 90.0)),
+            timeout_sec=max(5.0, min(float(llm_raw.get("timeout_sec", 45.0)), 240.0)),
+            max_retries=max(0, min(int(llm_raw.get("max_retries", 1)), 5)),
+            retry_backoff_sec=max(0.2, min(float(llm_raw.get("retry_backoff_sec", 1.0)), 10.0)),
             temperature=max(0.0, min(float(llm_raw.get("temperature", 0.2)), 2.0)),
             bailian_model=str(llm_raw.get("bailian_model", "qwen3.5-plus")),
             bailian_base_url=str(
@@ -350,6 +360,22 @@ def apply_env_overrides(
                 1,
                 20,
             ),
+            us_market_flow_enabled=_coerce_bool(
+                env.get("TRADEPULSE_MARKET_US_MARKET_FLOW_ENABLED"),
+                config.market_regime.us_market_flow_enabled,
+            ),
+            us_market_flow_top_n=_coerce_int(
+                env.get("TRADEPULSE_MARKET_US_MARKET_FLOW_TOP_N"),
+                config.market_regime.us_market_flow_top_n,
+                1,
+                30,
+            ),
+            us_market_flow_universe_size=_coerce_int(
+                env.get("TRADEPULSE_MARKET_US_MARKET_FLOW_UNIVERSE_SIZE"),
+                config.market_regime.us_market_flow_universe_size,
+                10,
+                100,
+            ),
             a_share_top_n=_coerce_int(
                 env.get("TRADEPULSE_MARKET_A_SHARE_TOP_N"),
                 config.market_regime.a_share_top_n,
@@ -393,8 +419,20 @@ def apply_env_overrides(
             timeout_sec=_coerce_float(
                 env.get("TRADEPULSE_LLM_TIMEOUT_SEC"),
                 config.llm.timeout_sec,
-                1.0,
-                90.0,
+                5.0,
+                240.0,
+            ),
+            max_retries=_coerce_int(
+                env.get("TRADEPULSE_LLM_MAX_RETRIES"),
+                config.llm.max_retries,
+                0,
+                5,
+            ),
+            retry_backoff_sec=_coerce_float(
+                env.get("TRADEPULSE_LLM_RETRY_BACKOFF_SEC"),
+                config.llm.retry_backoff_sec,
+                0.2,
+                10.0,
             ),
             temperature=_coerce_float(
                 env.get("TRADEPULSE_LLM_TEMPERATURE"),

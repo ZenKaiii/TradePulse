@@ -111,6 +111,9 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_MARKET_A_SHARE_ENABLED` | 可选 | 是否启用 A股资金流排名 | `true` |
 | `TRADEPULSE_MARKET_US_TOP_N` | 可选 | 美股领先/落后板块显示行数 | `3` |
 | `TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N` | 可选 | 美股个股资金流代理条数 | `5` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_ENABLED` | 可选 | 是否启用美股市场资金流TopN | `true` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_TOP_N` | 可选 | 美股市场资金流TopN显示行数 | `10` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_UNIVERSE_SIZE` | 可选 | 美股市场资金流股票池大小(10-100) | `30` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | 可选 | A股净流入/净流出显示行数 | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | 可选 | 市场数据请求超时（1-30秒） | `8` |
 | `TRADEPULSE_MARKET_SEC_ENABLED` | 可选 | 是否启用 SEC 披露追踪 | `true` |
@@ -119,7 +122,9 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_LLM_ENABLED` | 可选 | 是否启用 LLM 解读 | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | 可选 | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | 可选 | 详细解读条数 | `5` |
-| `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时 | `20` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时（思考模型建议45秒以上） | `45` |
+| `TRADEPULSE_LLM_MAX_RETRIES` | 可选 | LLM 最大重试次数(0-5) | `1` |
+| `TRADEPULSE_LLM_RETRY_BACKOFF_SEC` | 可选 | LLM 重试退避秒数(0.2-10) | `1.0` |
 | `TRADEPULSE_LLM_TEMPERATURE` | 可选 | LLM 温度参数 | `0.2` |
 | `TRADEPULSE_BAILIAN_MODEL` | 可选 | 百炼模型名 | `qwen3.5-plus` |
 | `TRADEPULSE_BAILIAN_BASE_URL` | 可选 | 百炼兼容模式地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |

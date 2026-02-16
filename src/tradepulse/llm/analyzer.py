@@ -26,16 +26,18 @@ def select_provider(llm_config: LLMConfig, environ: Optional[Mapping[str, str]] 
 
 
 def _fallback_analysis(event: Dict[str, Any], detail_mode: str) -> Dict[str, Any]:
-    summary = str(event.get("title", ""))
+    title = str(event.get("title", ""))
     if detail_mode == "brief":
-        summary = summary[:80]
+        summary = f"【规则回退】{title[:60]}..." if len(title) > 60 else f"【规则回退】{title}"
+    else:
+        summary = f"【规则回退】{title[:80]}..." if len(title) > 80 else f"【规则回退】{title}"
 
     return {
-        "summary_zh": summary or "暂无摘要",
-        "impact_reason_zh": str(event.get("impact_reason_zh", "基于规则推断")),
+        "summary_zh": summary or "暂无有效摘要",
+        "impact_reason_zh": "规则引擎推断：需结合板块与成交量判断",
         "direction": str(event.get("direction", "neutral")),
         "affected_tickers": list(event.get("affected_tickers", [])),
-        "beginner_note_zh": "这条消息需要结合板块强弱与成交量共同判断",
+        "beginner_note_zh": "该信息需结合行业趋势与成交量综合判断",
         "provider": "rule",
         "model": "rule-engine",
     }
@@ -89,6 +91,40 @@ def _normalize_tickers(value: Any) -> List[Dict[str, str]]:
         if symbol:
             result.append({"symbol": symbol, "name": name or symbol})
     return result
+
+
+def _call_bailian_with_retry(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
+    last_exception = None
+    for attempt in range(llm_config.max_retries + 1):
+        try:
+            return _call_bailian(prompt, llm_config, api_key)
+        except Exception as exc:
+            last_exception = exc
+            if attempt < llm_config.max_retries:
+                import time
+                backoff = llm_config.retry_backoff_sec * (attempt + 1)
+                print(f"[tradepulse][llm] bailian attempt {attempt + 1} failed: {str(exc)}, retrying in {backoff}s...")
+                time.sleep(backoff)
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("bailian call failed with no exception")
+
+
+def _call_gemini_with_retry(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
+    last_exception = None
+    for attempt in range(llm_config.max_retries + 1):
+        try:
+            return _call_gemini(prompt, llm_config, api_key)
+        except Exception as exc:
+            last_exception = exc
+            if attempt < llm_config.max_retries:
+                import time
+                backoff = llm_config.retry_backoff_sec * (attempt + 1)
+                print(f"[tradepulse][llm] gemini attempt {attempt + 1} failed: {str(exc)}, retrying in {backoff}s...")
+                time.sleep(backoff)
+    if last_exception:
+        raise last_exception
+    raise RuntimeError("gemini call failed with no exception")
 
 
 def _call_bailian(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
@@ -160,16 +196,16 @@ def generate_event_analysis(
     raw_text = ""
     if provider == "bailian":
         try:
-            raw_text = _call_bailian(prompt, llm_config, env["BAILIAN_API_KEY"])
+            raw_text = _call_bailian_with_retry(prompt, llm_config, env["BAILIAN_API_KEY"])
         except Exception:
             if env.get("GEMINI_API_KEY"):
-                raw_text = _call_gemini(prompt, llm_config, env["GEMINI_API_KEY"])
+                raw_text = _call_gemini_with_retry(prompt, llm_config, env["GEMINI_API_KEY"])
                 final_provider = "gemini"
                 final_model = llm_config.gemini_model
             else:
                 raise
     elif provider == "gemini":
-        raw_text = _call_gemini(prompt, llm_config, env["GEMINI_API_KEY"])
+        raw_text = _call_gemini_with_retry(prompt, llm_config, env["GEMINI_API_KEY"])
     else:
         raise RuntimeError("no provider available")
 

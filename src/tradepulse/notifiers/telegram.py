@@ -1,9 +1,9 @@
-from typing import Dict
+from typing import Dict, List
 
 from tradepulse.notifiers.base import _post_json
 
 
-def _chunk_text(text: str, limit: int = 3500) -> list[str]:
+def _chunk_text(text: str, limit: int = 3500) -> List[str]:
     stripped = (text or "").strip()
     if not stripped:
         return [""]

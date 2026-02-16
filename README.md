@@ -113,6 +113,9 @@ Notes:
 | `TRADEPULSE_MARKET_A_SHARE_ENABLED` | Optional | Enable A-share flow ranking | `true` |
 | `TRADEPULSE_MARKET_US_TOP_N` | Optional | US leaders/laggards row count | `3` |
 | `TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N` | Optional | US stock flow-proxy rows | `5` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_ENABLED` | Optional | Enable US market stock flow TopN | `true` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_TOP_N` | Optional | US market stock flow TopN rows | `10` |
+| `TRADEPULSE_MARKET_US_MARKET_FLOW_UNIVERSE_SIZE` | Optional | US market stock flow universe size (10-100) | `30` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | Optional | A-share inflow/outflow row count | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | Optional | Market data request timeout (1-30 sec) | `8` |
 | `TRADEPULSE_MARKET_SEC_ENABLED` | Optional | Enable SEC disclosure tracking | `true` |
@@ -121,7 +124,9 @@ Notes:
 | `TRADEPULSE_LLM_ENABLED` | Optional | Enable LLM analysis | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | Optional | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | Optional | Detailed analysis rows | `5` |
-| `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout | `20` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout (5-240 sec, recommended 45+ for thinking models) | `45` |
+| `TRADEPULSE_LLM_MAX_RETRIES` | Optional | LLM max retries (0-5) | `1` |
+| `TRADEPULSE_LLM_RETRY_BACKOFF_SEC` | Optional | LLM retry backoff seconds (0.2-10) | `1.0` |
 | `TRADEPULSE_LLM_TEMPERATURE` | Optional | LLM temperature | `0.2` |
 | `TRADEPULSE_BAILIAN_MODEL` | Optional | Bailian model name | `qwen3.5-plus` |
 | `TRADEPULSE_BAILIAN_BASE_URL` | Optional | Bailian OpenAI-compatible base URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` |

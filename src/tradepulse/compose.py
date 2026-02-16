@@ -1,5 +1,10 @@
 from typing import Dict, List, Optional
 
+
+def _has_chinese(text: str) -> bool:
+    return any('\u4e00' <= c <= '\u9fff' for c in str(text or ""))
+
+
 US_SECTOR_REP_STOCKS = {
     "XLK": "AAPL, MSFT, NVDA",
     "XLF": "JPM, BAC, WFC",
@@ -102,7 +107,10 @@ def compose_digest(
             lines.append(f"   - 🎯 相关标的: {_format_tickers(event.get('affected_tickers', []))}")
             lines.append(f"   - 🔍 影响说明: {event.get('impact_reason_zh', '暂无')}")
             if event.get("search_context"):
-                lines.append(f"   - 🔎 外部检索补充: {event.get('search_context')}")
+                context = event.get("search_context", "")
+                if not _has_chinese(context):
+                    context = f"[外部补充] {context}"
+                lines.append(f"   - 🔎 外部检索补充: {context}")
             if level == "detailed":
                 lines.append(
                     f"   - 👶 小白解读: {event.get('beginner_note_zh', '可先关注是否影响行业龙头和市场风险偏好')}"
@@ -214,7 +222,9 @@ def compose_digest(
             stock_flow = us.get("stock_flow", {})
             lines.append("### 美股个股资金流入代理（关注池）")
             stock_inflow = stock_flow.get("inflow", [])
+            stock_outflow = stock_flow.get("outflow", [])
             if stock_inflow:
+                lines.append("- 资金流入:")
                 for item in stock_inflow:
                     lines.append(
                         "  - {symbol} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
@@ -225,8 +235,39 @@ def compose_digest(
                             ar=float(item.get("activity_ratio", 0.0)),
                         )
                     )
-            else:
-                lines.append("- 暂无可用个股资金流代理数据")
+            if stock_outflow:
+                lines.append("- 资金流出:")
+                for item in stock_outflow:
+                    lines.append(
+                        "  - {symbol} 代理流出 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
+                            symbol=item.get("symbol", ""),
+                            flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
+                            pct=float(item.get("change_pct", 0.0)),
+                            dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
+                            ar=float(item.get("activity_ratio", 0.0)),
+                        )
+                    )
+            if not stock_inflow and not stock_outflow:
+                lines.append("- 暂无可用关注池资金流代理数据")
+
+            market_stock_flow = us.get("market_stock_flow", {})
+            if market_stock_flow:
+                lines.append("### 美股市场资金流入TopN（不限关注池）")
+                lines.append("- ℹ️ 说明: 以下为美股市场成交额前列的股票资金流向代理，供参考。")
+                market_inflow = market_stock_flow.get("inflow", [])
+                if market_inflow:
+                    lines.append("- 资金流入前列:")
+                    for item in market_inflow[:10]:
+                        lines.append(
+                            "  - {symbol} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv}".format(
+                                symbol=item.get("symbol", ""),
+                                flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
+                                pct=float(item.get("change_pct", 0.0)),
+                                dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
+                            )
+                        )
+                else:
+                    lines.append("- 暂无可用市场资金流数据")
         else:
             lines.append(f"- {us.get('message', '美股板块数据暂不可用')}")
 
@@ -271,7 +312,9 @@ def compose_digest(
 
         sec = market_regime.get("sec", {})
         lines.append("### 机构13F与内部人Form4（披露追踪）")
-        lines.append("- ℹ️ 披露说明: 13F与Form4来自SEC公开申报，属于披露数据，不是实时交易流水。")
+        lines.append("- ℹ️ 13F说明: 机构季度持仓报告，展示主要机构最新持仓动向")
+        lines.append("- ℹ️ Form4说明: 内部人交易披露，需关注内部人买入/卖出意向")
+        lines.append("- ⚠️ 注意: 披露存在时滞（13F最长达45天），非实时数据")
         if sec.get("status") == "ok":
             institutions = sec.get("institutions_13f", [])
             insiders = sec.get("insiders_form4", [])
