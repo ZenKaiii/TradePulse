@@ -13,6 +13,7 @@ from tradepulse.notifiers.telegram import send as send_telegram
 from tradepulse.overlays import match_overlays
 from tradepulse.pipeline.cluster import cluster_articles
 from tradepulse.pipeline.rule_score import score_cluster
+from tradepulse.sources import fetch_articles_from_feeds
 from tradepulse.storage import PushLedger
 
 
@@ -79,7 +80,9 @@ def run_once(dry_run: bool = False) -> Dict:
         user_cfg_path = root / "config" / "user.example.yaml"
 
     config = load_user_config(user_cfg_path)
-    clusters = cluster_articles(_sample_articles())
+    fetched_articles = fetch_articles_from_feeds(config.sources.profile)
+    articles = fetched_articles or _sample_articles()
+    clusters = cluster_articles(articles)
 
     scored_events = []
     for cluster in clusters:
