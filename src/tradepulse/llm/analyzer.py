@@ -103,12 +103,24 @@ def _call_bailian(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
                 {"role": "user", "content": prompt},
             ],
             "temperature": llm_config.temperature,
+            "response_format": {"type": "json_object"},
         },
         timeout=llm_config.timeout_sec,
     )
     response.raise_for_status()
     data = response.json()
-    return data["choices"][0]["message"]["content"]
+    content = data["choices"][0]["message"]["content"]
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text_parts.append(str(item.get("text", "")))
+            else:
+                text_parts.append(str(item))
+        return "\n".join(part for part in text_parts if part)
+    return str(content)
 
 
 def _call_gemini(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
@@ -120,7 +132,10 @@ def _call_gemini(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
         url,
         json={
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": llm_config.temperature},
+            "generationConfig": {
+                "temperature": llm_config.temperature,
+                "responseMimeType": "application/json",
+            },
         },
         timeout=llm_config.timeout_sec,
     )
@@ -158,8 +173,18 @@ def generate_event_analysis(
     else:
         raise RuntimeError("no provider available")
 
-    parsed = _extract_json(raw_text)
     fallback = _fallback_analysis(event, detail_mode)
+    try:
+        parsed = _extract_json(raw_text)
+    except Exception:
+        parsed = {
+            "summary_zh": raw_text.strip()[:120] or fallback["summary_zh"],
+            "impact_reason_zh": fallback["impact_reason_zh"],
+            "direction": fallback["direction"],
+            "affected_tickers": fallback["affected_tickers"],
+            "beginner_note_zh": fallback["beginner_note_zh"],
+        }
+
     return {
         "summary_zh": str(parsed.get("summary_zh") or fallback["summary_zh"]),
         "impact_reason_zh": str(parsed.get("impact_reason_zh") or fallback["impact_reason_zh"]),
@@ -179,13 +204,13 @@ def enrich_top_events_with_llm(
     generate_fn: Optional[
         Callable[[Dict[str, Any], str, LLMConfig, str], Dict[str, Any]]
     ] = None,
-) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     if not events:
         return events, {"provider": "rule", "model": "rule-engine"}
 
     provider = select_provider(llm_config, environ)
     if not llm_config.enabled or provider == "none":
-        return events, {"provider": "rule", "model": "rule-engine"}
+        return events, {"provider": "rule", "model": "rule-engine", "attempted_provider": provider, "failures": 0}
 
     generator = generate_fn or (
         lambda event, detail_mode, cfg, selected_provider: generate_event_analysis(
@@ -200,13 +225,18 @@ def enrich_top_events_with_llm(
     enriched: List[Dict[str, Any]] = []
     used_provider = provider
     used_model = llm_config.bailian_model if provider == "bailian" else llm_config.gemini_model
+    failures = 0
 
     for index, event in enumerate(events):
         detail_mode = "detailed" if index < llm_config.detail_top_n else "brief"
         fallback = _fallback_analysis(event, detail_mode)
         try:
             analysis = generator(event, detail_mode, llm_config, provider)
-        except Exception:
+        except Exception as exc:
+            failures += 1
+            print(
+                f"[tradepulse][llm] analysis failed for provider={provider}: {str(exc)}"
+            )
             analysis = fallback
 
         merged = dict(event)
@@ -226,4 +256,9 @@ def enrich_top_events_with_llm(
         used_model = merged["analysis_model"]
         enriched.append(merged)
 
-    return enriched, {"provider": used_provider, "model": used_model}
+    return enriched, {
+        "provider": used_provider,
+        "model": used_model,
+        "attempted_provider": provider,
+        "failures": failures,
+    }

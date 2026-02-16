@@ -44,10 +44,17 @@ def compose_digest(
 ) -> str:
     provider = (analysis_meta or {}).get("provider", "rule")
     model = (analysis_meta or {}).get("model", "rule-engine")
+    attempted_provider = (analysis_meta or {}).get("attempted_provider", "none")
+    failures = int((analysis_meta or {}).get("failures", 0) or 0)
+    engine_line = f"> 🤖 分析引擎: `{provider}/{model}` | 策略: 前5条详细 + 后5条简版"
+    if failures > 0:
+        engine_line = (
+            f"{engine_line} | ⚠️ LLM失败 {failures} 条 (尝试: {attempted_provider})，已回退规则解释"
+        )
     lines = [
         "# 📡 TradePulse 每小时快报",
         "",
-        f"> 🤖 分析引擎: `{provider}/{model}` | 策略: 前5条详细 + 后5条简版",
+        engine_line,
         "",
         "## A. 本小时关键事件 Top10（含中文解读）",
     ]

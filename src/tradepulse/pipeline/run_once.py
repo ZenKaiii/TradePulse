@@ -176,5 +176,7 @@ def run_once(dry_run: bool = False) -> Dict:
             "delivery_errors": len(errors),
             "analysis_provider": analysis_meta.get("provider", "rule"),
             "analysis_model": analysis_meta.get("model", "rule-engine"),
+            "analysis_attempted_provider": analysis_meta.get("attempted_provider", "none"),
+            "analysis_failures": int(analysis_meta.get("failures", 0)),
         },
     }
