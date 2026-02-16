@@ -1,6 +1,6 @@
 # TradePulse Setup
 
-## 1. Local Setup
+## 1. Local install
 
 ```bash
 python3 -m venv .venv
@@ -8,43 +8,72 @@ python3 -m venv .venv
 .venv/bin/pip install -e .
 ```
 
-## 2. Config
+## 2. Base config file
 
 ```bash
 cp config/user.example.yaml config/user.yaml
 ```
 
-Edit:
+Recommended fields in `config/user.yaml`:
+
+- `digest.top_n`
+- `sources.profile`
+- `sources.tier`
+- `sources.min_health_score`
 - `watchlists.stocks`
 - `watchlists.keywords`
 - `watchlists.geopolitics`
-- `digest.top_n` (default 10)
-- `sources.tier` (`core` / `extended` / `experimental`)
-- `sources.min_health_score` (0-100)
 - `delivery.channels`
 
-## 3. Dry Run
+## 3. Runtime override model
 
-```bash
-.venv/bin/python -m tradepulse.cli run --dry-run
-```
+Runtime config priority:
 
-## 4. Required/Optional Secrets
+1. `TRADEPULSE_*` environment variables
+2. `config/user.yaml`
+3. `config/user.example.yaml`
 
-LLM (at least one recommended):
-- `BAILIAN_API_KEY`
-- `GEMINI_API_KEY`
+Use this to keep reusable defaults in git and environment-specific changes in GitHub Variables.
 
-Push channels (optional):
-- `DINGTALK_WEBHOOK_URL`
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `FEISHU_WEBHOOK_URL`
+## 4. GitHub Actions
 
-## 5. GitHub Actions
+Workflow:
 
-Workflow is preconfigured at:
 - `.github/workflows/hourly.yml`
 
 Schedule:
+
 - every hour (`0 * * * *`)
+
+### 4.1 Secrets (sensitive)
+
+- `BAILIAN_API_KEY` (recommended primary LLM)
+- `GEMINI_API_KEY` (optional fallback LLM)
+- `DINGTALK_WEBHOOK_URL` (optional)
+- `TELEGRAM_BOT_TOKEN` (optional)
+- `TELEGRAM_CHAT_ID` (optional)
+- `FEISHU_WEBHOOK_URL` (optional)
+
+### 4.2 Variables (non-sensitive)
+
+- `TRADEPULSE_CONFIG_PATH`
+- `TRADEPULSE_TOP_N`
+- `TRADEPULSE_SOURCE_PROFILE`
+- `TRADEPULSE_SOURCE_TIER`
+- `TRADEPULSE_MIN_HEALTH_SCORE`
+- `TRADEPULSE_STOCKS`
+- `TRADEPULSE_KEYWORDS`
+- `TRADEPULSE_GEOPOLITICS`
+- `TRADEPULSE_CHANNELS`
+
+List variables support comma or newline separators.
+
+## 5. Dry run and production run
+
+```bash
+# local dry run (no push)
+.venv/bin/python -m tradepulse.cli run --dry-run
+
+# production run (push enabled channels)
+.venv/bin/python -m tradepulse.cli run
+```

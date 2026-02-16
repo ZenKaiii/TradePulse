@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Mapping, Optional
 
 import yaml
 
@@ -47,6 +47,34 @@ def _as_list(value: Any) -> List[str]:
     return [str(item) for item in value if isinstance(item, (str, int, float))]
 
 
+def _coerce_int(
+    value: Optional[str],
+    default: int,
+    min_value: int,
+    max_value: int,
+) -> int:
+    if value is None or value == "":
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(parsed, max_value))
+
+
+def _coerce_csv(value: Optional[str], default: List[str]) -> List[str]:
+    if not value:
+        return default
+
+    items = []
+    normalized = value.replace("\n", ",")
+    for part in normalized.split(","):
+        item = part.strip()
+        if item:
+            items.append(item)
+    return items or default
+
+
 def load_user_config(path: Path) -> UserConfig:
     raw = {}
     if path.exists():
@@ -75,4 +103,46 @@ def load_user_config(path: Path) -> UserConfig:
             geopolitics=_as_list(watch_raw.get("geopolitics")),
         ),
         delivery=DeliveryConfig(channels=channels),
+    )
+
+
+def apply_env_overrides(
+    config: UserConfig,
+    environ: Optional[Mapping[str, str]] = None,
+) -> UserConfig:
+    env = dict(environ or {})
+    return UserConfig(
+        digest=DigestConfig(
+            top_n=_coerce_int(env.get("TRADEPULSE_TOP_N"), config.digest.top_n, 1, 50),
+        ),
+        sources=SourcesConfig(
+            profile=env.get("TRADEPULSE_SOURCE_PROFILE", config.sources.profile),
+            tier=env.get("TRADEPULSE_SOURCE_TIER", config.sources.tier),
+            min_health_score=_coerce_int(
+                env.get("TRADEPULSE_MIN_HEALTH_SCORE"),
+                config.sources.min_health_score,
+                0,
+                100,
+            ),
+        ),
+        watchlists=WatchlistsConfig(
+            stocks=_coerce_csv(env.get("TRADEPULSE_STOCKS"), config.watchlists.stocks),
+            keywords=_coerce_csv(
+                env.get("TRADEPULSE_KEYWORDS"),
+                config.watchlists.keywords,
+            ),
+            geopolitics=_coerce_csv(
+                env.get("TRADEPULSE_GEOPOLITICS"),
+                config.watchlists.geopolitics,
+            ),
+        ),
+        delivery=DeliveryConfig(
+            channels=[
+                item.lower()
+                for item in _coerce_csv(
+                    env.get("TRADEPULSE_CHANNELS"),
+                    config.delivery.channels,
+                )
+            ],
+        ),
     )

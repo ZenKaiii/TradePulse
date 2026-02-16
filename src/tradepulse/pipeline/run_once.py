@@ -4,7 +4,7 @@ import os
 import hashlib
 
 from tradepulse.compose import compose_digest
-from tradepulse.config import load_user_config
+from tradepulse.config import apply_env_overrides, load_user_config
 from tradepulse.models import CanonicalArticle
 from tradepulse.notifiers import send_best_effort
 from tradepulse.notifiers.dingtalk import send as send_dingtalk
@@ -55,19 +55,21 @@ def _sample_articles() -> List[CanonicalArticle]:
     return out
 
 
-def _collect_senders(text: str):
+def _collect_senders(text: str, channels: List[str]):
     senders = []
+    enabled = {channel.lower() for channel in channels}
+
     dingtalk_webhook = os.getenv("DINGTALK_WEBHOOK_URL", "")
-    if dingtalk_webhook:
+    if "dingtalk" in enabled and dingtalk_webhook:
         senders.append(lambda: send_dingtalk(dingtalk_webhook, text))
 
     telegram_bot = os.getenv("TELEGRAM_BOT_TOKEN", "")
     telegram_chat = os.getenv("TELEGRAM_CHAT_ID", "")
-    if telegram_bot and telegram_chat:
+    if "telegram" in enabled and telegram_bot and telegram_chat:
         senders.append(lambda: send_telegram(telegram_bot, telegram_chat, text))
 
     feishu_webhook = os.getenv("FEISHU_WEBHOOK_URL", "")
-    if feishu_webhook:
+    if "feishu" in enabled and feishu_webhook:
         senders.append(lambda: send_feishu(feishu_webhook, text))
 
     return senders
@@ -75,11 +77,17 @@ def _collect_senders(text: str):
 
 def run_once(dry_run: bool = False) -> Dict:
     root = _project_root()
-    user_cfg_path = root / "config" / "user.yaml"
+    config_path_env = os.getenv("TRADEPULSE_CONFIG_PATH", "").strip()
+    if config_path_env:
+        candidate = Path(config_path_env)
+        user_cfg_path = candidate if candidate.is_absolute() else root / candidate
+    else:
+        user_cfg_path = root / "config" / "user.yaml"
+
     if not user_cfg_path.exists():
         user_cfg_path = root / "config" / "user.example.yaml"
 
-    config = load_user_config(user_cfg_path)
+    config = apply_env_overrides(load_user_config(user_cfg_path), os.environ)
     fetched_articles, feed_health = fetch_articles_with_health(
         profile=config.sources.profile,
         tier=config.sources.tier,
@@ -136,7 +144,7 @@ def run_once(dry_run: bool = False) -> Dict:
 
     errors = []
     if not dry_run:
-        errors = send_best_effort(_collect_senders(digest))
+        errors = send_best_effort(_collect_senders(digest, config.delivery.channels))
 
     return {
         "digest": digest,
