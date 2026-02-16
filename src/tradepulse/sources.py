@@ -24,6 +24,16 @@ FEED_PROFILES: Dict[str, List[Feed]] = {
         },
         {"name": "CNBC", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "tier": "core"},
         {"name": "Yahoo Finance", "url": "https://finance.yahoo.com/news/rssindex", "tier": "core"},
+        {
+            "name": "Google News Business",
+            "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en",
+            "tier": "extended",
+        },
+        {
+            "name": "Google News US Market",
+            "url": "https://news.google.com/rss/search?q=US+stock+market+when:1d&hl=en-US&gl=US&ceid=US:en",
+            "tier": "extended",
+        },
         {"name": "BBC Business", "url": "https://feeds.bbci.co.uk/news/business/rss.xml", "tier": "extended"},
         {"name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "tier": "extended"},
         {"name": "Hacker News", "url": "https://hnrss.org/frontpage", "tier": "experimental"},

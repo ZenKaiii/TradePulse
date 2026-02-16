@@ -15,6 +15,7 @@ def test_telegram_payload_contains_text():
     payload = build_telegram_payload("bot-token", "chat-id", "hello")
     assert payload["url"].endswith("/sendMessage")
     assert payload["json"]["text"] == "hello"
+    assert payload["json"]["parse_mode"] == "Markdown"
 
 
 def test_telegram_send_splits_long_message(monkeypatch):
@@ -29,6 +30,22 @@ def test_telegram_send_splits_long_message(monkeypatch):
 
     assert len(sent_texts) >= 2
     assert all(len(item) <= 3500 for item in sent_texts)
+
+
+def test_telegram_send_falls_back_to_plain_text_when_markdown_fails(monkeypatch):
+    calls = []
+
+    def _fake_post(url, payload):
+        calls.append(payload)
+        if len(calls) == 1:
+            raise RuntimeError("Bad Request: can't parse entities")
+
+    monkeypatch.setattr(telegram_notifier, "_post_json", _fake_post)
+    telegram_notifier.send("bot-token", "chat-id", "# Header\n- item")
+
+    assert len(calls) == 2
+    assert calls[0].get("parse_mode") == "Markdown"
+    assert "parse_mode" not in calls[1]
 
 
 def test_feishu_payload_contains_text():

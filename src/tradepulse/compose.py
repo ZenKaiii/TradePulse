@@ -36,6 +36,14 @@ def _format_net_flow(value: float) -> str:
     return f"{value / 100000000.0:+.2f}亿"
 
 
+def _format_usd_million(value: float) -> str:
+    return f"{value / 1_000_000.0:+.2f}M"
+
+
+def _format_usd_billion(value: float) -> str:
+    return f"{value / 1_000_000_000.0:.2f}B"
+
+
 def _format_overlay_topic_list(values: List[Dict]) -> str:
     topics = [str(item.get("topic", "")).strip() for item in values if str(item.get("topic", "")).strip()]
     return ", ".join(topics) if topics else "无"
@@ -81,7 +89,11 @@ def compose_digest(
         lines.append("- ⏳ 本小时无新增关键事件（已做增量去重）")
     else:
         for index, event in enumerate(top_events, start=1):
-            level = event.get("analysis_level", "brief")
+            # Keep display policy stable even when LLM is disabled/fallback:
+            # top 5 are rendered as detailed, remaining as brief.
+            level = str(event.get("analysis_level", ""))
+            if level not in {"detailed", "brief"}:
+                level = "detailed" if index <= 5 else "brief"
             level_text = "详细" if level == "detailed" else "简版"
             summary = event.get("summary_zh") or event.get("title", "暂无")
             lines.append(f"{index}. 📰 {event.get('title', 'Untitled')}（{level_text}）")
@@ -89,6 +101,8 @@ def compose_digest(
             lines.append(f"   - 📈 市场方向: {_map_direction(event.get('direction', 'neutral'))}")
             lines.append(f"   - 🎯 相关标的: {_format_tickers(event.get('affected_tickers', []))}")
             lines.append(f"   - 🔍 影响说明: {event.get('impact_reason_zh', '暂无')}")
+            if event.get("search_context"):
+                lines.append(f"   - 🔎 外部检索补充: {event.get('search_context')}")
             if level == "detailed":
                 lines.append(
                     f"   - 👶 小白解读: {event.get('beginner_note_zh', '可先关注是否影响行业龙头和市场风险偏好')}"
@@ -111,6 +125,7 @@ def compose_digest(
         lines.append("")
         lines.append("## C. Section 4 板块轮动与资金流")
         lines.append("- ℹ️ 指标说明: 4W/12W 表示近4周/12周相对SPY+QQQ的强弱，综合分越高说明资金偏好越强。")
+        lines.append("- ℹ️ 资金流代理说明: 美股部分为 `成交额 × 当日涨跌幅` 的代理指标，用于观察资金偏好，不等同于逐笔真实净流入。")
 
         us = market_regime.get("us", {})
         lines.append("### 美股行业相对强弱（4W/12W 对比 SPY+QQQ）")
@@ -161,6 +176,57 @@ def compose_digest(
                     lines.append(f"    - 代表股: {rep}")
             else:
                 lines.append("- 落后板块: 无")
+
+            flow_proxy = us.get("flow_proxy", {})
+            lines.append("### 美股板块当日资金流代理")
+            inflow = flow_proxy.get("inflow", [])
+            outflow = flow_proxy.get("outflow", [])
+            if inflow:
+                lines.append("- 板块资金流入代理前列:")
+                for item in inflow:
+                    lines.append(
+                        "  - {symbol} ({name}) 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv}".format(
+                            symbol=item.get("symbol", ""),
+                            name=item.get("name", ""),
+                            flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
+                            pct=float(item.get("change_pct", 0.0)),
+                            dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
+                        )
+                    )
+            else:
+                lines.append("- 板块资金流入代理前列: 无")
+
+            if outflow:
+                lines.append("- 板块资金流出代理前列:")
+                for item in outflow:
+                    lines.append(
+                        "  - {symbol} ({name}) 代理流出 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv}".format(
+                            symbol=item.get("symbol", ""),
+                            name=item.get("name", ""),
+                            flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
+                            pct=float(item.get("change_pct", 0.0)),
+                            dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
+                        )
+                    )
+            else:
+                lines.append("- 板块资金流出代理前列: 无")
+
+            stock_flow = us.get("stock_flow", {})
+            lines.append("### 美股个股资金流入代理（关注池）")
+            stock_inflow = stock_flow.get("inflow", [])
+            if stock_inflow:
+                for item in stock_inflow:
+                    lines.append(
+                        "  - {symbol} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
+                            symbol=item.get("symbol", ""),
+                            flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
+                            pct=float(item.get("change_pct", 0.0)),
+                            dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
+                            ar=float(item.get("activity_ratio", 0.0)),
+                        )
+                    )
+            else:
+                lines.append("- 暂无可用个股资金流代理数据")
         else:
             lines.append(f"- {us.get('message', '美股板块数据暂不可用')}")
 
@@ -202,5 +268,43 @@ def compose_digest(
                 lines.append("- 净流出前列: 无")
         else:
             lines.append(f"- {a_share.get('message', 'A股资金流数据暂不可用')}")
+
+        sec = market_regime.get("sec", {})
+        lines.append("### 机构13F与内部人Form4（披露追踪）")
+        lines.append("- ℹ️ 披露说明: 13F与Form4来自SEC公开申报，属于披露数据，不是实时交易流水。")
+        if sec.get("status") == "ok":
+            institutions = sec.get("institutions_13f", [])
+            insiders = sec.get("insiders_form4", [])
+
+            if institutions:
+                lines.append("- 机构13F最新披露:")
+                for item in institutions[:5]:
+                    lines.append(
+                        "  - {institution} {form} | {date} | {url}".format(
+                            institution=item.get("institution", ""),
+                            form=item.get("form", ""),
+                            date=item.get("filing_date", ""),
+                            url=item.get("url", ""),
+                        )
+                    )
+            else:
+                lines.append("- 机构13F最新披露: 无")
+
+            if insiders:
+                lines.append("- 内部人Form4最新披露:")
+                for item in insiders[:5]:
+                    lines.append(
+                        "  - {symbol} ({issuer}) {form} | {date} | {url}".format(
+                            symbol=item.get("symbol", ""),
+                            issuer=item.get("issuer", ""),
+                            form=item.get("form", ""),
+                            date=item.get("filing_date", ""),
+                            url=item.get("url", ""),
+                        )
+                    )
+            else:
+                lines.append("- 内部人Form4最新披露: 无")
+        else:
+            lines.append(f"- {sec.get('message', 'SEC披露数据暂不可用')}")
 
     return "\n".join(lines)

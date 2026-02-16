@@ -16,9 +16,16 @@ def test_default_top_n_is_10(tmp_path: Path):
     assert data.market_regime.enabled is True
     assert data.market_regime.us_top_n == 3
     assert data.market_regime.a_share_top_n == 5
+    assert data.market_regime.us_stock_flow_top_n == 5
+    assert data.market_regime.sec_enabled is True
+    assert data.market_regime.sec_user_agent.startswith("TradePulse/0.1")
+    assert "0001067983" in data.market_regime.sec_13f_ciks
     assert data.llm.enabled is True
     assert data.llm.detail_top_n == 5
-    assert data.llm.bailian_model == "qwen-plus"
+    assert data.llm.bailian_model == "qwen3.5-plus"
+    assert data.llm.gemini_model == "gemini-3-pro-preview"
+    assert data.search.enabled is False
+    assert data.search.provider == "tavily"
 
 
 def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
@@ -75,7 +82,11 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "TRADEPULSE_MARKET_A_SHARE_ENABLED": "true",
             "TRADEPULSE_MARKET_US_TOP_N": "4",
             "TRADEPULSE_MARKET_A_SHARE_TOP_N": "6",
+            "TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N": "7",
             "TRADEPULSE_MARKET_TIMEOUT_SEC": "12.5",
+            "TRADEPULSE_MARKET_SEC_ENABLED": "true",
+            "TRADEPULSE_MARKET_SEC_13F_CIKS": "0001067983,0001350694",
+            "TRADEPULSE_SEC_USER_AGENT": "TradePulse/0.1 (contact: you@example.com)",
             "TRADEPULSE_LLM_ENABLED": "true",
             "TRADEPULSE_LLM_PROVIDER": "bailian",
             "TRADEPULSE_LLM_DETAIL_TOP_N": "4",
@@ -85,6 +96,11 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "TRADEPULSE_BAILIAN_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "TRADEPULSE_GEMINI_MODEL": "gemini-2.5-flash",
             "TRADEPULSE_GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
+            "TRADEPULSE_SEARCH_ENABLED": "true",
+            "TRADEPULSE_SEARCH_PROVIDER": "tavily",
+            "TRADEPULSE_SEARCH_TOP_N": "2",
+            "TRADEPULSE_SEARCH_MAX_RESULTS": "4",
+            "TRADEPULSE_SEARCH_TIMEOUT_SEC": "9",
         },
     )
 
@@ -102,7 +118,11 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     assert runtime.market_regime.a_share_enabled is True
     assert runtime.market_regime.us_top_n == 4
     assert runtime.market_regime.a_share_top_n == 6
+    assert runtime.market_regime.us_stock_flow_top_n == 7
     assert runtime.market_regime.request_timeout_sec == 12.5
+    assert runtime.market_regime.sec_enabled is True
+    assert runtime.market_regime.sec_13f_ciks == ["0001067983", "0001350694"]
+    assert runtime.market_regime.sec_user_agent == "TradePulse/0.1 (contact: you@example.com)"
     assert runtime.llm.enabled is True
     assert runtime.llm.provider == "bailian"
     assert runtime.llm.detail_top_n == 4
@@ -110,6 +130,11 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     assert runtime.llm.temperature == 0.15
     assert runtime.llm.bailian_model == "qwen-max"
     assert runtime.llm.gemini_model == "gemini-2.5-flash"
+    assert runtime.search.enabled is True
+    assert runtime.search.provider == "tavily"
+    assert runtime.search.top_n == 2
+    assert runtime.search.max_results == 4
+    assert runtime.search.timeout_sec == 9.0
 
 
 def test_empty_env_values_do_not_override_llm_urls(tmp_path: Path):

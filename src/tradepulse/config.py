@@ -37,8 +37,21 @@ class MarketRegimeConfig:
     us_enabled: bool = True
     a_share_enabled: bool = True
     us_top_n: int = 3
+    us_stock_flow_top_n: int = 5
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
+    sec_enabled: bool = True
+    sec_13f_ciks: List[str] = field(
+        default_factory=lambda: [
+            "0001067983",
+            "0001350694",
+            "0001037389",
+            "0001649339",
+            "0001167483",
+            "0001423053",
+        ]
+    )
+    sec_user_agent: str = "TradePulse/0.1 (contact: tradepulse@example.com)"
 
 
 @dataclass
@@ -48,10 +61,19 @@ class LLMConfig:
     detail_top_n: int = 5
     timeout_sec: float = 20.0
     temperature: float = 0.2
-    bailian_model: str = "qwen-plus"
+    bailian_model: str = "qwen3.5-plus"
     bailian_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3-pro-preview"
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
+
+
+@dataclass
+class SearchEnhanceConfig:
+    enabled: bool = False
+    provider: str = "tavily"
+    top_n: int = 3
+    max_results: int = 3
+    timeout_sec: float = 12.0
 
 
 @dataclass
@@ -62,6 +84,7 @@ class UserConfig:
     delivery: DeliveryConfig = field(default_factory=DeliveryConfig)
     market_regime: MarketRegimeConfig = field(default_factory=MarketRegimeConfig)
     llm: LLMConfig = field(default_factory=LLMConfig)
+    search: SearchEnhanceConfig = field(default_factory=SearchEnhanceConfig)
 
 
 def _as_dict(value: Any) -> Dict[str, Any]:
@@ -157,6 +180,7 @@ def load_user_config(path: Path) -> UserConfig:
     delivery_raw = _as_dict(raw.get("delivery"))
     market_raw = _as_dict(raw.get("market_regime"))
     llm_raw = _as_dict(raw.get("llm"))
+    search_raw = _as_dict(raw.get("search"))
 
     top_n = max(1, min(int(digest_raw.get("top_n", 10)), 50))
     max_age_hours = max(1, min(int(digest_raw.get("max_age_hours", 72)), 720))
@@ -186,10 +210,31 @@ def load_user_config(path: Path) -> UserConfig:
             us_enabled=_as_bool(market_raw.get("us_enabled"), True),
             a_share_enabled=_as_bool(market_raw.get("a_share_enabled"), True),
             us_top_n=max(1, min(int(market_raw.get("us_top_n", 3)), 10)),
+            us_stock_flow_top_n=max(1, min(int(market_raw.get("us_stock_flow_top_n", 5)), 20)),
             a_share_top_n=max(1, min(int(market_raw.get("a_share_top_n", 5)), 20)),
             request_timeout_sec=max(
                 1.0,
                 min(float(market_raw.get("request_timeout_sec", 8.0)), 30.0),
+            ),
+            sec_enabled=_as_bool(market_raw.get("sec_enabled"), True),
+            sec_13f_ciks=_as_list(
+                market_raw.get(
+                    "sec_13f_ciks",
+                    [
+                        "0001067983",
+                        "0001350694",
+                        "0001037389",
+                        "0001649339",
+                        "0001167483",
+                        "0001423053",
+                    ],
+                )
+            ),
+            sec_user_agent=str(
+                market_raw.get(
+                    "sec_user_agent",
+                    "TradePulse/0.1 (contact: tradepulse@example.com)",
+                )
             ),
         ),
         llm=LLMConfig(
@@ -198,20 +243,27 @@ def load_user_config(path: Path) -> UserConfig:
             detail_top_n=max(0, min(int(llm_raw.get("detail_top_n", 5)), 20)),
             timeout_sec=max(1.0, min(float(llm_raw.get("timeout_sec", 20.0)), 90.0)),
             temperature=max(0.0, min(float(llm_raw.get("temperature", 0.2)), 2.0)),
-            bailian_model=str(llm_raw.get("bailian_model", "qwen-plus")),
+            bailian_model=str(llm_raw.get("bailian_model", "qwen3.5-plus")),
             bailian_base_url=str(
                 llm_raw.get(
                     "bailian_base_url",
                     "https://dashscope.aliyuncs.com/compatible-mode/v1",
                 )
             ),
-            gemini_model=str(llm_raw.get("gemini_model", "gemini-2.0-flash")),
+            gemini_model=str(llm_raw.get("gemini_model", "gemini-3-pro-preview")),
             gemini_base_url=str(
                 llm_raw.get(
                     "gemini_base_url",
                     "https://generativelanguage.googleapis.com/v1beta",
                 )
             ),
+        ),
+        search=SearchEnhanceConfig(
+            enabled=_as_bool(search_raw.get("enabled"), False),
+            provider=str(search_raw.get("provider", "tavily")).strip().lower() or "tavily",
+            top_n=max(1, min(int(search_raw.get("top_n", 3)), 10)),
+            max_results=max(1, min(int(search_raw.get("max_results", 3)), 10)),
+            timeout_sec=max(1.0, min(float(search_raw.get("timeout_sec", 12.0)), 30.0)),
         ),
     )
 
@@ -292,6 +344,12 @@ def apply_env_overrides(
                 1,
                 10,
             ),
+            us_stock_flow_top_n=_coerce_int(
+                env.get("TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N"),
+                config.market_regime.us_stock_flow_top_n,
+                1,
+                20,
+            ),
             a_share_top_n=_coerce_int(
                 env.get("TRADEPULSE_MARKET_A_SHARE_TOP_N"),
                 config.market_regime.a_share_top_n,
@@ -303,6 +361,18 @@ def apply_env_overrides(
                 config.market_regime.request_timeout_sec,
                 1.0,
                 30.0,
+            ),
+            sec_enabled=_coerce_bool(
+                env.get("TRADEPULSE_MARKET_SEC_ENABLED"),
+                config.market_regime.sec_enabled,
+            ),
+            sec_13f_ciks=_coerce_csv(
+                env.get("TRADEPULSE_MARKET_SEC_13F_CIKS"),
+                config.market_regime.sec_13f_ciks,
+            ),
+            sec_user_agent=_coerce_text(
+                env.get("TRADEPULSE_SEC_USER_AGENT"),
+                config.market_regime.sec_user_agent,
             ),
         ),
         llm=LLMConfig(
@@ -347,6 +417,34 @@ def apply_env_overrides(
             gemini_base_url=_coerce_text(
                 env.get("TRADEPULSE_GEMINI_BASE_URL"),
                 config.llm.gemini_base_url,
+            ),
+        ),
+        search=SearchEnhanceConfig(
+            enabled=_coerce_bool(
+                env.get("TRADEPULSE_SEARCH_ENABLED"),
+                config.search.enabled,
+            ),
+            provider=_coerce_text(
+                env.get("TRADEPULSE_SEARCH_PROVIDER"),
+                config.search.provider,
+            ).lower(),
+            top_n=_coerce_int(
+                env.get("TRADEPULSE_SEARCH_TOP_N"),
+                config.search.top_n,
+                1,
+                10,
+            ),
+            max_results=_coerce_int(
+                env.get("TRADEPULSE_SEARCH_MAX_RESULTS"),
+                config.search.max_results,
+                1,
+                10,
+            ),
+            timeout_sec=_coerce_float(
+                env.get("TRADEPULSE_SEARCH_TIMEOUT_SEC"),
+                config.search.timeout_sec,
+                1.0,
+                30.0,
             ),
         ),
     )

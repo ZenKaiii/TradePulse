@@ -28,8 +28,18 @@ market_regime:
   us_enabled: true
   a_share_enabled: true
   us_top_n: 3
+  us_stock_flow_top_n: 5
   a_share_top_n: 5
   request_timeout_sec: 8
+  sec_enabled: true
+  sec_user_agent: "TradePulse/0.1 (contact: tradepulse@example.com)"
+  sec_13f_ciks:
+    - "0001067983"
+    - "0001350694"
+    - "0001037389"
+    - "0001649339"
+    - "0001167483"
+    - "0001423053"
 
 llm:
   enabled: true
@@ -37,7 +47,14 @@ llm:
   detail_top_n: 5
   timeout_sec: 20
   temperature: 0.2
-  bailian_model: qwen-plus
+  bailian_model: qwen3.5-plus
   bailian_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  gemini_model: gemini-2.0-flash
+  gemini_model: gemini-3-pro-preview
   gemini_base_url: https://generativelanguage.googleapis.com/v1beta
+
+search:
+  enabled: false
+  provider: tavily
+  top_n: 3
+  max_results: 3
+  timeout_sec: 12

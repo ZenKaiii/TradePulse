@@ -30,8 +30,12 @@ Recommended fields in `config/user.yaml`:
 - `market_regime.us_enabled`
 - `market_regime.a_share_enabled`
 - `market_regime.us_top_n`
+- `market_regime.us_stock_flow_top_n`
 - `market_regime.a_share_top_n`
 - `market_regime.request_timeout_sec`
+- `market_regime.sec_enabled`
+- `market_regime.sec_13f_ciks`
+- `market_regime.sec_user_agent`
 - `llm.enabled`
 - `llm.provider`
 - `llm.detail_top_n`
@@ -41,6 +45,11 @@ Recommended fields in `config/user.yaml`:
 - `llm.bailian_base_url`
 - `llm.gemini_model`
 - `llm.gemini_base_url`
+- `search.enabled`
+- `search.provider`
+- `search.top_n`
+- `search.max_results`
+- `search.timeout_sec`
 
 ## 3. Runtime override model
 
@@ -70,6 +79,7 @@ Schedule:
 - `TELEGRAM_BOT_TOKEN` (optional)
 - `TELEGRAM_CHAT_ID` (optional)
 - `FEISHU_WEBHOOK_URL` (optional)
+- `TAVILY_API_KEY` (optional search enhancement)
 
 ### 4.2 Variables (non-sensitive)
 
@@ -88,8 +98,12 @@ Schedule:
 - `TRADEPULSE_MARKET_US_ENABLED`
 - `TRADEPULSE_MARKET_A_SHARE_ENABLED`
 - `TRADEPULSE_MARKET_US_TOP_N`
+- `TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N`
 - `TRADEPULSE_MARKET_A_SHARE_TOP_N`
 - `TRADEPULSE_MARKET_TIMEOUT_SEC`
+- `TRADEPULSE_MARKET_SEC_ENABLED`
+- `TRADEPULSE_MARKET_SEC_13F_CIKS`
+- `TRADEPULSE_SEC_USER_AGENT`
 - `TRADEPULSE_LLM_ENABLED`
 - `TRADEPULSE_LLM_PROVIDER`
 - `TRADEPULSE_LLM_DETAIL_TOP_N`
@@ -99,9 +113,14 @@ Schedule:
 - `TRADEPULSE_BAILIAN_BASE_URL`
 - `TRADEPULSE_GEMINI_MODEL`
 - `TRADEPULSE_GEMINI_BASE_URL`
+- `TRADEPULSE_SEARCH_ENABLED`
+- `TRADEPULSE_SEARCH_PROVIDER`
+- `TRADEPULSE_SEARCH_TOP_N`
+- `TRADEPULSE_SEARCH_MAX_RESULTS`
+- `TRADEPULSE_SEARCH_TIMEOUT_SEC`
 
 List variables support comma or newline separators.
-For LLM defaults, TradePulse uses `qwen-plus` (Bailian) and falls back to `gemini-2.0-flash` when configured.
+For LLM defaults, TradePulse uses `qwen3.5-plus` (Bailian) and falls back to `gemini-3-pro-preview` when configured.
 If `TRADEPULSE_CHANNELS` is empty, channels are auto-detected from configured secrets.
 
 ### 4.3 Incremental state persistence

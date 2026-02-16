@@ -10,7 +10,7 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
 - Pull high-signal RSS/news sources for traders
 - Rank events by importance (Top N)
 - Add topic overlays (stocks/keywords/geopolitics) without breaking the main ranking
-- Add market-regime section (US sector rotation + A-share sector flow)
+- Add market-regime section (US sector rotation + US flow proxy + A-share sector flow + SEC disclosures)
 - Output actionable digest:
   - market direction: `Bullish / Bearish / Neutral`
   - affected tickers and company names
@@ -37,10 +37,14 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
    - source cap (`max_per_source`)
 7. Build market-regime snapshot:
    - US: 11 SPDR sector ETFs relative strength (`4W/12W` vs `SPY + QQQ`)
+   - US: sector/stock daily flow proxy (`dollar_volume * daily_return`)
+   - US: institution 13F + insider Form4 disclosure tracking
    - A-share: sector inflow/outflow ranking
-8. Build digest (`TopN + overlays + Section 4`)
-9. Use SQLite ledger for incremental push
-10. Send to enabled channels (explicit channels first, else auto-detect from credentials)
+8. Optional search enhancement:
+   - Tavily enriches top detailed events with external context (disabled by default)
+9. Build digest (`TopN + overlays + Section 4`)
+10. Use SQLite ledger for incremental push
+11. Send to enabled channels (explicit channels first, else auto-detect from credentials)
 
 ## Quick Start
 
@@ -82,6 +86,7 @@ Default schedule:
 | `TELEGRAM_BOT_TOKEN` | Optional | Telegram bot token from BotFather | `123456:ABC-DEF...` |
 | `TELEGRAM_CHAT_ID` | Optional | Telegram target chat id | `-1001234567890` |
 | `FEISHU_WEBHOOK_URL` | Optional | Feishu bot webhook | `https://open.feishu.cn/open-apis/bot/v2/hook/***` |
+| `TAVILY_API_KEY` | Optional | Tavily search API key (for optional search enhancement) | `tvly-***` |
 
 Notes:
 
@@ -107,17 +112,26 @@ Notes:
 | `TRADEPULSE_MARKET_US_ENABLED` | Optional | Enable US sector rotation | `true` |
 | `TRADEPULSE_MARKET_A_SHARE_ENABLED` | Optional | Enable A-share flow ranking | `true` |
 | `TRADEPULSE_MARKET_US_TOP_N` | Optional | US leaders/laggards row count | `3` |
+| `TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N` | Optional | US stock flow-proxy rows | `5` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | Optional | A-share inflow/outflow row count | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | Optional | Market data request timeout (1-30 sec) | `8` |
+| `TRADEPULSE_MARKET_SEC_ENABLED` | Optional | Enable SEC disclosure tracking | `true` |
+| `TRADEPULSE_MARKET_SEC_13F_CIKS` | Optional | Institution 13F CIK list (comma-separated) | `0001067983,0001350694` |
+| `TRADEPULSE_SEC_USER_AGENT` | Optional | SEC API User-Agent with contact | `TradePulse/0.1 (contact: you@example.com)` |
 | `TRADEPULSE_LLM_ENABLED` | Optional | Enable LLM analysis | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | Optional | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | Optional | Detailed analysis rows | `5` |
 | `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout | `20` |
 | `TRADEPULSE_LLM_TEMPERATURE` | Optional | LLM temperature | `0.2` |
-| `TRADEPULSE_BAILIAN_MODEL` | Optional | Bailian model name | `qwen-plus` |
+| `TRADEPULSE_BAILIAN_MODEL` | Optional | Bailian model name | `qwen3.5-plus` |
 | `TRADEPULSE_BAILIAN_BASE_URL` | Optional | Bailian OpenAI-compatible base URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `TRADEPULSE_GEMINI_MODEL` | Optional | Gemini model name | `gemini-2.0-flash` |
+| `TRADEPULSE_GEMINI_MODEL` | Optional | Gemini model name | `gemini-3-pro-preview` |
 | `TRADEPULSE_GEMINI_BASE_URL` | Optional | Gemini API base URL | `https://generativelanguage.googleapis.com/v1beta` |
+| `TRADEPULSE_SEARCH_ENABLED` | Optional | Enable search enhancement | `false` |
+| `TRADEPULSE_SEARCH_PROVIDER` | Optional | Search provider (`tavily`) | `tavily` |
+| `TRADEPULSE_SEARCH_TOP_N` | Optional | Number of detailed events to enrich | `3` |
+| `TRADEPULSE_SEARCH_MAX_RESULTS` | Optional | Tavily max results per query | `3` |
+| `TRADEPULSE_SEARCH_TIMEOUT_SEC` | Optional | Search request timeout | `12` |
 
 List-type variables support comma or newline separators.
 
@@ -136,13 +150,14 @@ If `TRADEPULSE_CHANNELS` is empty, TradePulse auto-detects channels from credent
   - Add bot to target chat/group.
   - Fetch `chat_id` via Telegram Bot API and set `TELEGRAM_CHAT_ID`.
   - Long digests are auto-split into multiple Telegram messages to avoid length-limit drops.
+  - TradePulse sends Telegram with markdown parse mode and falls back to plain text if parsing fails.
 - Feishu:
   - Create custom bot and copy webhook URL to `FEISHU_WEBHOOK_URL`.
 
 ## Source Tiers
 
 - `core`: default high-signal feeds
-- `extended`: `core` + broader coverage
+- `extended`: `core` + broader coverage (includes Google News business/market feeds)
 - `experimental`: `extended` + long-tail feeds
 
 Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-health feeds.
@@ -151,7 +166,7 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 
 1. A. 本小时关键事件 TopN（Top5 detailed + next5 brief, Chinese AI explanation）
 2. B. 专题命中（股票 / 关键词 / 地缘）
-3. C. Section 4 板块轮动与资金流（US/A-share）
+3. C. Section 4 板块轮动与资金流（US/A-share + SEC disclosures）
 4. Each event includes direction, affected stock(s), impact note, and sources
 5. If there is no incremental event in this run, Section A shows a clear “no new key events” message
 
@@ -164,6 +179,8 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 
 - US ETF history: Stooq daily CSV endpoint (`stooq.com`)
 - A-share sector flow: Eastmoney push2 industry ranking endpoint (`push2.eastmoney.com`)
+- SEC disclosures: `data.sec.gov/submissions` (13F / Form4)
+- Optional search context: Tavily Search API (`api.tavily.com`)
 
 ## Run Commands
 

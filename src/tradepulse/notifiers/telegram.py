@@ -28,10 +28,29 @@ def _chunk_text(text: str, limit: int = 3500) -> list[str]:
     return [chunk for chunk in chunks if chunk] or [stripped[:limit]]
 
 
+def _to_telegram_markdown(text: str) -> str:
+    out = []
+    for line in str(text or "").splitlines():
+        if line.startswith("### "):
+            out.append(f"*{line[4:].strip()}*")
+        elif line.startswith("## "):
+            out.append(f"*{line[3:].strip()}*")
+        elif line.startswith("# "):
+            out.append(f"*{line[2:].strip()}*")
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
 def build_payload(bot_token: str, chat_id: str, text: str) -> Dict:
     return {
         "url": f"https://api.telegram.org/bot{bot_token}/sendMessage",
-        "json": {"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+        "json": {
+            "chat_id": chat_id,
+            "text": _to_telegram_markdown(text),
+            "disable_web_page_preview": True,
+            "parse_mode": "Markdown",
+        },
     }
 
 
@@ -40,4 +59,13 @@ def send(bot_token: str, chat_id: str, text: str) -> None:
         raise ValueError("telegram token and chat_id are required")
     for chunk in _chunk_text(text):
         payload = build_payload(bot_token, chat_id, chunk)
-        _post_json(payload["url"], payload["json"])
+        try:
+            _post_json(payload["url"], payload["json"])
+        except Exception as exc:
+            # Retry plain text when markdown parsing fails in Telegram.
+            if "parse entities" not in str(exc).lower():
+                raise
+            plain_payload = dict(payload["json"])
+            plain_payload.pop("parse_mode", None)
+            plain_payload["text"] = chunk
+            _post_json(payload["url"], plain_payload)

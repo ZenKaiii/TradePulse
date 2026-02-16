@@ -17,6 +17,7 @@ from tradepulse.notifiers.telegram import send as send_telegram
 from tradepulse.overlays import match_overlays
 from tradepulse.pipeline.cluster import cluster_articles
 from tradepulse.pipeline.rule_score import score_cluster
+from tradepulse.search import enrich_events_with_tavily
 from tradepulse.sources import fetch_articles_with_health
 from tradepulse.storage import PushLedger
 
@@ -210,6 +211,7 @@ def run_once(dry_run: bool = False) -> Dict:
             break
 
     top_events, analysis_meta = enrich_top_events_with_llm(top_events, config.llm)
+    top_events, search_meta = enrich_events_with_tavily(top_events, config.search, os.environ)
 
     overlay_hits = match_overlays(
         candidate_pool,
@@ -224,8 +226,13 @@ def run_once(dry_run: bool = False) -> Dict:
             us_enabled=config.market_regime.us_enabled,
             a_share_enabled=config.market_regime.a_share_enabled,
             us_top_n=config.market_regime.us_top_n,
+            us_stock_flow_top_n=config.market_regime.us_stock_flow_top_n,
             a_share_top_n=config.market_regime.a_share_top_n,
             request_timeout_sec=config.market_regime.request_timeout_sec,
+            stock_universe=config.watchlists.stocks,
+            sec_enabled=config.market_regime.sec_enabled,
+            sec_13f_ciks=config.market_regime.sec_13f_ciks,
+            sec_user_agent=config.market_regime.sec_user_agent,
         )
     )
 
@@ -261,5 +268,8 @@ def run_once(dry_run: bool = False) -> Dict:
             "analysis_model": analysis_meta.get("model", "rule-engine"),
             "analysis_attempted_provider": analysis_meta.get("attempted_provider", "none"),
             "analysis_failures": int(analysis_meta.get("failures", 0)),
+            "search_provider": search_meta.get("provider", "none"),
+            "search_hits": int(search_meta.get("hits", 0)),
+            "search_failures": int(search_meta.get("failures", 0)),
         },
     }

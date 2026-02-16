@@ -11,8 +11,17 @@ def _post_json(url: str, payload: Dict) -> None:
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(request, timeout=15):
-        return
+    try:
+        with urllib.request.urlopen(request, timeout=15):
+            return
+    except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="ignore")
+        except Exception:
+            body = ""
+        message = body.strip() or str(exc)
+        raise RuntimeError(message) from exc
 
 
 def send_best_effort(senders: Iterable[Callable[[], None]]) -> List[str]:

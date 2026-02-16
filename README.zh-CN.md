@@ -8,7 +8,7 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
 - 聚合交易相关的高信号新闻/RSS
 - 按重要性排序输出 TopN
 - 支持专题命中（股票/关键词/地缘）作为附加视图，不干扰主排序
-- 支持 Section 4 市场结构（美股板块轮动 + A股资金流）
+- 支持 Section 4 市场结构（美股板块轮动 + 美股资金流代理 + A股资金流 + SEC披露）
 - 每条事件都给出：
   - `利好 / 利空 / 中性`
   - 影响股票代码和公司名
@@ -35,10 +35,14 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
    - 单来源上限（`max_per_source`）
 7. 生成市场结构快照：
    - 美股：11 个 SPDR 行业 ETF 的 `4W/12W` 相对强弱（对比 `SPY + QQQ`）
+   - 美股：板块/个股当日资金流代理（`成交额 × 当日涨跌幅`）
+   - 美股：机构13F + 内部人Form4 披露追踪
    - A股：行业资金净流入/净流出排名
-8. 生成快报（TopN + 专题层 + Section 4）
-9. SQLite 记录已推送事件，实现增量推送
-10. 按渠道发送消息（显式 channels 优先，否则按密钥自动识别）
+8. 可选搜索增强：
+   - Tavily 对详细事件做外部信息补充（默认关闭）
+9. 生成快报（TopN + 专题层 + Section 4）
+10. SQLite 记录已推送事件，实现增量推送
+11. 按渠道发送消息（显式 channels 优先，否则按密钥自动识别）
 
 ## 快速开始
 
@@ -80,6 +84,7 @@ cp config/user.example.yaml config/user.yaml
 | `TELEGRAM_BOT_TOKEN` | 可选 | Telegram Bot Token | `123456:ABC-DEF...` |
 | `TELEGRAM_CHAT_ID` | 可选 | Telegram 目标会话 ID | `-1001234567890` |
 | `FEISHU_WEBHOOK_URL` | 可选 | 飞书机器人 webhook | `https://open.feishu.cn/open-apis/bot/v2/hook/***` |
+| `TAVILY_API_KEY` | 可选 | Tavily 搜索增强 key（可选） | `tvly-***` |
 
 说明：
 
@@ -105,17 +110,26 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_MARKET_US_ENABLED` | 可选 | 是否启用美股板块轮动 | `true` |
 | `TRADEPULSE_MARKET_A_SHARE_ENABLED` | 可选 | 是否启用 A股资金流排名 | `true` |
 | `TRADEPULSE_MARKET_US_TOP_N` | 可选 | 美股领先/落后板块显示行数 | `3` |
+| `TRADEPULSE_MARKET_US_STOCK_FLOW_TOP_N` | 可选 | 美股个股资金流代理条数 | `5` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | 可选 | A股净流入/净流出显示行数 | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | 可选 | 市场数据请求超时（1-30秒） | `8` |
+| `TRADEPULSE_MARKET_SEC_ENABLED` | 可选 | 是否启用 SEC 披露追踪 | `true` |
+| `TRADEPULSE_MARKET_SEC_13F_CIKS` | 可选 | 机构13F CIK 列表（逗号分隔） | `0001067983,0001350694` |
+| `TRADEPULSE_SEC_USER_AGENT` | 可选 | SEC API 的 User-Agent（带联系方式） | `TradePulse/0.1 (contact: you@example.com)` |
 | `TRADEPULSE_LLM_ENABLED` | 可选 | 是否启用 LLM 解读 | `true` |
 | `TRADEPULSE_LLM_PROVIDER` | 可选 | `auto/bailian/gemini` | `auto` |
 | `TRADEPULSE_LLM_DETAIL_TOP_N` | 可选 | 详细解读条数 | `5` |
 | `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时 | `20` |
 | `TRADEPULSE_LLM_TEMPERATURE` | 可选 | LLM 温度参数 | `0.2` |
-| `TRADEPULSE_BAILIAN_MODEL` | 可选 | 百炼模型名 | `qwen-plus` |
+| `TRADEPULSE_BAILIAN_MODEL` | 可选 | 百炼模型名 | `qwen3.5-plus` |
 | `TRADEPULSE_BAILIAN_BASE_URL` | 可选 | 百炼兼容模式地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
-| `TRADEPULSE_GEMINI_MODEL` | 可选 | Gemini 模型名 | `gemini-2.0-flash` |
+| `TRADEPULSE_GEMINI_MODEL` | 可选 | Gemini 模型名 | `gemini-3-pro-preview` |
 | `TRADEPULSE_GEMINI_BASE_URL` | 可选 | Gemini API 地址 | `https://generativelanguage.googleapis.com/v1beta` |
+| `TRADEPULSE_SEARCH_ENABLED` | 可选 | 是否启用搜索增强 | `false` |
+| `TRADEPULSE_SEARCH_PROVIDER` | 可选 | 搜索提供方（`tavily`） | `tavily` |
+| `TRADEPULSE_SEARCH_TOP_N` | 可选 | 搜索增强事件条数 | `3` |
+| `TRADEPULSE_SEARCH_MAX_RESULTS` | 可选 | 每条事件搜索返回条数 | `3` |
+| `TRADEPULSE_SEARCH_TIMEOUT_SEC` | 可选 | 搜索请求超时秒数 | `12` |
 
 列表类变量支持逗号或换行分隔。
 
@@ -134,13 +148,14 @@ cp config/user.example.yaml config/user.yaml
   - 把机器人拉入目标群/频道。
   - 通过 Bot API 获取 `chat_id`，配置到 `TELEGRAM_CHAT_ID`。
   - 超长快报会自动拆分为多条 Telegram 消息，避免因长度限制导致发送失败。
+  - 优先按 Markdown 模式发送；若解析失败会自动回退纯文本，保证可达。
 - 飞书：
   - 创建自定义机器人，复制 webhook 到 `FEISHU_WEBHOOK_URL`。
 
 ## 信息源层级
 
 - `core`：高信号核心源
-- `extended`：`core` + 更广覆盖
+- `extended`：`core` + 更广覆盖（包含 Google News 商业/市场 RSS）
 - `experimental`：`extended` + 长尾实验源
 
 你可以用 `sources.min_health_score`（或 `TRADEPULSE_MIN_HEALTH_SCORE`）过滤低健康度源。
@@ -149,7 +164,7 @@ cp config/user.example.yaml config/user.yaml
 
 1. A. 本小时关键事件 TopN（前5条详细 + 后5条简版，中文AI解读）
 2. B. 专题命中（股票 / 关键词 / 地缘）
-3. C. Section 4 板块轮动与资金流（美股/A股）
+3. C. Section 4 板块轮动与资金流（美股/A股 + SEC披露）
 4. 每条事件都包含方向、影响标的、影响说明、来源
 5. 若本轮无新增事件，A区会明确显示“本小时无新增关键事件”
 
@@ -162,6 +177,8 @@ cp config/user.example.yaml config/user.yaml
 
 - 美股 ETF 历史数据：Stooq 日线 CSV（`stooq.com`）
 - A股行业资金流：东方财富 push2 行业排行接口（`push2.eastmoney.com`）
+- SEC 披露：`data.sec.gov/submissions`（13F / Form4）
+- 可选搜索增强：Tavily Search API（`api.tavily.com`）
 
 ## 运行命令
 
