@@ -36,6 +36,14 @@ DEFAULT_SEC_13F_CIKS = [
     "0001423053",  # Citadel Advisors
 ]
 
+US_HIGH_LIQUIDITY_STOCKS = [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "GOOG", "AMZN", "META", "TSLA", "BRK.B", "JNJ",
+    "V", "UNH", "XOM", "JPM", "PG", "MA", "HD", "CVX", "MRK", "ABBV",
+    "LLY", "PEP", "KO", "COST", "AVGO", "TMO", "MCD", "CSCO", "ACN", "DIS",
+    "WMT", "ABT", "DHR", "ADBE", "CRM", "TXN", "VZ", "NKE", "NEE", "PM",
+    "INTC", "AMD", "QCOM", "INTU", "AMAT", "BKNG", "ISRG", "GILD", "MDLZ", "ADP",
+]
+
 
 @dataclass
 class MarketRegimeOptions:
@@ -44,6 +52,7 @@ class MarketRegimeOptions:
     a_share_enabled: bool = True
     us_top_n: int = 3
     us_stock_flow_top_n: int = 5
+    us_market_flow_universe_size: int = 50
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
     stock_universe: List[str] = field(default_factory=list)
@@ -471,6 +480,20 @@ def build_market_regime_snapshot(
                 )
             except Exception:
                 us_snapshot["stock_flow"] = {"inflow": [], "outflow": []}
+
+            try:
+                market_symbols = US_HIGH_LIQUIDITY_STOCKS[:options.us_market_flow_universe_size]
+                market_stock_flow_map = _fetch_us_flow_map(
+                    symbols=market_symbols,
+                    timeout_sec=options.request_timeout_sec,
+                    flow_fetcher=us_flow_fetcher,
+                )
+                us_snapshot["market_stock_flow"] = compute_us_flow_proxy_rankings(
+                    market_stock_flow_map,
+                    top_n=options.us_stock_flow_top_n,
+                )
+            except Exception:
+                us_snapshot["market_stock_flow"] = {"inflow": [], "outflow": []}
 
         snapshot["us"] = us_snapshot
 
