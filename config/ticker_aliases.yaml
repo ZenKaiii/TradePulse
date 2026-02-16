@@ -1,0 +1,18 @@
+NVDA:
+  name: NVIDIA
+  aliases:
+    - nvda
+    - nvidia
+    - 英伟达
+AAPL:
+  name: Apple
+  aliases:
+    - aapl
+    - apple
+    - 苹果
+TSLA:
+  name: Tesla
+  aliases:
+    - tsla
+    - tesla
+    - 特斯拉
