@@ -230,9 +230,6 @@ def run_once(dry_run: bool = False) -> Dict:
             a_share_top_n=config.market_regime.a_share_top_n,
             request_timeout_sec=config.market_regime.request_timeout_sec,
             stock_universe=config.watchlists.stocks,
-            sec_enabled=config.market_regime.sec_enabled,
-            sec_13f_ciks=config.market_regime.sec_13f_ciks,
-            sec_user_agent=config.market_regime.sec_user_agent,
         )
     )
 

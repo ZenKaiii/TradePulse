@@ -26,6 +26,62 @@ A_SHARE_SECTOR_REP_STOCKS = {
     "电力设备": "宁德时代, 隆基绿能, 阳光电源",
 }
 
+# 美股公司业务信息映射
+US_STOCK_INFO = {
+    "AAPL": {"name": "苹果公司", "sector": "科技", "desc": "全球领先的消费电子和软件服务公司"},
+    "MSFT": {"name": "微软公司", "sector": "科技", "desc": "全球最大的软件公司，云计算和AI领导者"},
+    "GOOGL": {"name": "Alphabet谷歌", "sector": "科技", "desc": "全球最大的搜索引擎和广告平台"},
+    "GOOG": {"name": "Alphabet谷歌", "sector": "科技", "desc": "全球最大的搜索引擎和广告平台"},
+    "AMZN": {"name": "亚马逊", "sector": "消费", "desc": "全球最大的电商和云计算平台"},
+    "NVDA": {"name": "英伟达", "sector": "科技", "desc": "全球领先的GPU和AI芯片供应商"},
+    "META": {"name": "Meta Platforms", "sector": "通信", "desc": "全球最大的社交网络平台"},
+    "TSLA": {"name": "特斯拉", "sector": "消费", "desc": "全球领先的电动汽车和能源公司"},
+    "BRK.B": {"name": "伯克希尔哈撒韦", "sector": "金融", "desc": "全球最大的多元化控股公司"},
+    "JPM": {"name": "摩根大通", "sector": "金融", "desc": "全球最大的商业银行之一"},
+    "V": {"name": "Visa", "sector": "金融", "desc": "全球最大的支付网络公司"},
+    "JNJ": {"name": "强生公司", "sector": "医疗", "desc": "全球最大的医疗健康公司"},
+    "WMT": {"name": "沃尔玛", "sector": "消费", "desc": "全球最大的零售连锁企业"},
+    "PG": {"name": "宝洁公司", "sector": "消费", "desc": "全球最大的日用消费品公司"},
+    "MA": {"name": "万事达卡", "sector": "金融", "desc": "全球领先的支付网络公司"},
+    "UNH": {"name": "联合健康", "sector": "医疗", "desc": "美国最大的健康保险公司"},
+    "HD": {"name": "家得宝", "sector": "消费", "desc": "全球最大的家居建材零售商"},
+    "DIS": {"name": "迪士尼", "sector": "通信", "desc": "全球领先的娱乐媒体公司"},
+    "BAC": {"name": "美国银行", "sector": "金融", "desc": "美国第二大商业银行"},
+    "XOM": {"name": "埃克森美孚", "sector": "能源", "desc": "全球最大的石油化工公司之一"},
+    "CVX": {"name": "雪佛龙", "sector": "能源", "desc": "全球领先的综合性石油公司"},
+    "PFE": {"name": "辉瑞制药", "sector": "医疗", "desc": "全球最大的制药公司之一"},
+    "KO": {"name": "可口可乐", "sector": "消费", "desc": "全球最大的饮料公司"},
+    "PEP": {"name": "百事可乐", "sector": "消费", "desc": "全球领先的食品饮料公司"},
+    "COST": {"name": "开市客", "sector": "消费", "desc": "全球最大的会员制仓储超市"},
+    "AVGO": {"name": "博通", "sector": "科技", "desc": "全球领先的半导体和基础设施软件公司"},
+    "TMO": {"name": "赛默飞世尔", "sector": "医疗", "desc": "全球领先的科学研究服务公司"},
+    "MRK": {"name": "默克制药", "sector": "医疗", "desc": "全球领先的制药公司"},
+    "CSCO": {"name": "思科系统", "sector": "科技", "desc": "全球领先的网络设备供应商"},
+    "ABBV": {"name": "艾伯维", "sector": "医疗", "desc": "全球领先的生物制药公司"},
+    "ACN": {"name": "埃森哲", "sector": "科技", "desc": "全球领先的IT服务咨询公司"},
+    "LLY": {"name": "礼来公司", "sector": "医疗", "desc": "全球领先的制药公司，专注糖尿病和减肥药"},
+    "MCD": {"name": "麦当劳", "sector": "消费", "desc": "全球最大的快餐连锁企业"},
+    "DHR": {"name": "丹纳赫", "sector": "医疗", "desc": "全球领先的生命科学和诊断公司"},
+    "ADBE": {"name": "Adobe", "sector": "科技", "desc": "全球领先的创意软件公司"},
+    "CRM": {"name": "Salesforce", "sector": "科技", "desc": "全球领先的云CRM平台"},
+    "WFC": {"name": "富国银行", "sector": "金融", "desc": "美国第三大商业银行"},
+    "NFLX": {"name": "Netflix", "sector": "通信", "desc": "全球领先的流媒体平台"},
+    "AMD": {"name": "AMD", "sector": "科技", "desc": "全球领先的处理器制造商"},
+    "INTC": {"name": "英特尔", "sector": "科技", "desc": "全球最大的半导体芯片制造商"},
+    "QCOM": {"name": "高通", "sector": "科技", "desc": "全球领先的无线通信芯片供应商"},
+    "TXN": {"name": "德州仪器", "sector": "科技", "desc": "全球领先的模拟芯片制造商"},
+    "NKE": {"name": "耐克", "sector": "消费", "desc": "全球最大的运动鞋服公司"},
+    "ORCL": {"name": "甲骨文", "sector": "科技", "desc": "全球领先的数据库软件公司"},
+    "IBM": {"name": "IBM", "sector": "科技", "desc": "全球领先的企业IT服务公司"},
+    "NOW": {"name": "ServiceNow", "sector": "科技", "desc": "全球领先的企业云服务数字化转型平台"},
+    "UBER": {"name": "优步", "sector": "科技", "desc": "全球最大的网约车平台"},
+    "LYFT": {"name": "Lyft", "sector": "科技", "desc": "美国第二大网约车平台"},
+    "SNAP": {"name": "Snap", "sector": "通信", "desc": "全球领先的社交媒体平台(Snapchat)"},
+    "SQ": {"name": "Block", "sector": "金融", "desc": "全球领先的移动支付公司"},
+    "COIN": {"name": "Coinbase", "sector": "金融", "desc": "全球最大的加密货币交易所"},
+    "HOOD": {"name": "Robinhood", "sector": "金融", "desc": "全球领先的零佣金股票交易平台"},
+}
+
 
 def _map_direction(direction: str) -> str:
     return {"bullish": "利好", "bearish": "利空", "neutral": "中性"}.get(direction, "中性")
@@ -52,6 +108,10 @@ def _format_usd_billion(value: float) -> str:
 def _format_overlay_topic_list(values: List[Dict]) -> str:
     topics = [str(item.get("topic", "")).strip() for item in values if str(item.get("topic", "")).strip()]
     return ", ".join(topics) if topics else "无"
+
+
+def _get_stock_info(symbol: str) -> Optional[Dict]:
+    return US_STOCK_INFO.get(symbol.upper())
 
 
 def _append_overlay_details(lines: List[str], label: str, values: List[Dict]) -> None:
@@ -226,9 +286,13 @@ def compose_digest(
             if stock_inflow:
                 lines.append("- 资金流入:")
                 for item in stock_inflow:
+                    symbol = item.get("symbol", "")
+                    stock_info = _get_stock_info(symbol)
+                    info_line = f" | {stock_info['name']}({stock_info['sector']})" if stock_info else ""
                     lines.append(
-                        "  - {symbol} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
-                            symbol=item.get("symbol", ""),
+                        "  - {symbol}{info} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
+                            symbol=symbol,
+                            info=info_line,
                             flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
                             pct=float(item.get("change_pct", 0.0)),
                             dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
@@ -238,9 +302,13 @@ def compose_digest(
             if stock_outflow:
                 lines.append("- 资金流出:")
                 for item in stock_outflow:
+                    symbol = item.get("symbol", "")
+                    stock_info = _get_stock_info(symbol)
+                    info_line = f" | {stock_info['name']}({stock_info['sector']})" if stock_info else ""
                     lines.append(
-                        "  - {symbol} 代理流出 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
-                            symbol=item.get("symbol", ""),
+                        "  - {symbol}{info} 代理流出 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv} | 活跃度 {ar:.2f}x".format(
+                            symbol=symbol,
+                            info=info_line,
                             flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
                             pct=float(item.get("change_pct", 0.0)),
                             dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
@@ -258,9 +326,13 @@ def compose_digest(
                 if market_inflow:
                     lines.append("- 资金流入前列:")
                     for item in market_inflow[:10]:
+                        symbol = item.get("symbol", "")
+                        stock_info = _get_stock_info(symbol)
+                        info_line = f" | {stock_info['name']}({stock_info['sector']})" if stock_info else ""
                         lines.append(
-                            "  - {symbol} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv}".format(
-                                symbol=item.get("symbol", ""),
+                            "  - {symbol}{info} 代理流入 {flow} | 涨跌幅 {pct:+.2f}% | 成交额 ${dv}".format(
+                                symbol=symbol,
+                                info=info_line,
                                 flow=_format_usd_million(float(item.get("flow_proxy", 0.0))),
                                 pct=float(item.get("change_pct", 0.0)),
                                 dv=_format_usd_billion(float(item.get("dollar_volume", 0.0))),
@@ -309,45 +381,5 @@ def compose_digest(
                 lines.append("- 净流出前列: 无")
         else:
             lines.append(f"- {a_share.get('message', 'A股资金流数据暂不可用')}")
-
-        sec = market_regime.get("sec", {})
-        lines.append("### 机构13F与内部人Form4（披露追踪）")
-        lines.append("- ℹ️ 13F说明: 机构季度持仓报告，展示主要机构最新持仓动向")
-        lines.append("- ℹ️ Form4说明: 内部人交易披露，需关注内部人买入/卖出意向")
-        lines.append("- ⚠️ 注意: 披露存在时滞（13F最长达45天），非实时数据")
-        if sec.get("status") == "ok":
-            institutions = sec.get("institutions_13f", [])
-            insiders = sec.get("insiders_form4", [])
-
-            if institutions:
-                lines.append("- 机构13F最新披露:")
-                for item in institutions[:5]:
-                    lines.append(
-                        "  - {institution} {form} | {date} | {url}".format(
-                            institution=item.get("institution", ""),
-                            form=item.get("form", ""),
-                            date=item.get("filing_date", ""),
-                            url=item.get("url", ""),
-                        )
-                    )
-            else:
-                lines.append("- 机构13F最新披露: 无")
-
-            if insiders:
-                lines.append("- 内部人Form4最新披露:")
-                for item in insiders[:5]:
-                    lines.append(
-                        "  - {symbol} ({issuer}) {form} | {date} | {url}".format(
-                            symbol=item.get("symbol", ""),
-                            issuer=item.get("issuer", ""),
-                            form=item.get("form", ""),
-                            date=item.get("filing_date", ""),
-                            url=item.get("url", ""),
-                        )
-                    )
-            else:
-                lines.append("- 内部人Form4最新披露: 无")
-        else:
-            lines.append(f"- {sec.get('message', 'SEC披露数据暂不可用')}")
 
     return "\n".join(lines)

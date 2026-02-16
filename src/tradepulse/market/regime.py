@@ -26,17 +26,8 @@ A_SHARE_FLOW_URL = (
     "&fltt=2&invt=2&fid=f62&fs=m:90+t:2"
     "&fields=f12,f14,f2,f3,f62,f184"
 )
-SEC_COMPANY_TICKERS_URL = "https://www.sec.gov/files/company_tickers.json"
 NASDAQ_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/nasdaqlisted.txt"
 OTHER_LISTED_URL = "https://www.nasdaqtrader.com/dynamic/symdir/otherlisted.txt"
-DEFAULT_SEC_13F_CIKS = [
-    "0001067983",  # Berkshire Hathaway
-    "0001350694",  # Bridgewater Associates
-    "0001037389",  # Renaissance Technologies
-    "0001649339",  # Scion Asset Management
-    "0001167483",  # Tiger Global
-    "0001423053",  # Citadel Advisors
-]
 
 
 @dataclass
@@ -52,9 +43,6 @@ class MarketRegimeOptions:
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
     stock_universe: List[str] = field(default_factory=list)
-    sec_enabled: bool = False
-    sec_13f_ciks: List[str] = field(default_factory=lambda: list(DEFAULT_SEC_13F_CIKS))
-    sec_user_agent: str = "TradePulse/0.1 (contact: tradepulse@example.com)"
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -314,141 +302,7 @@ def fetch_nasdaq_symbols(timeout_sec: float) -> List[str]:
     except Exception as exc:
         print(f"[tradepulse][market] Other listed fetch failed: {exc}")
     
-    return list(set(symbols))[:500]
-
-
-def _normalize_cik(value: str) -> str:
-    digits = "".join(char for char in str(value or "") if char.isdigit())
-    return digits.zfill(10) if digits else ""
-
-
-def fetch_sec_company_tickers(timeout_sec: float, user_agent: str) -> Dict[str, Dict[str, str]]:
-    response = httpx.get(
-        SEC_COMPANY_TICKERS_URL,
-        timeout=timeout_sec,
-        headers={"User-Agent": user_agent},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if not isinstance(payload, dict):
-        return {}
-
-    mapping: Dict[str, Dict[str, str]] = {}
-    for item in payload.values():
-        if not isinstance(item, dict):
-            continue
-        symbol = str(item.get("ticker", "")).upper().strip()
-        if not symbol:
-            continue
-        mapping[symbol] = {
-            "symbol": symbol,
-            "name": str(item.get("title", symbol)).strip(),
-            "cik": _normalize_cik(str(item.get("cik_str", ""))),
-        }
-    return mapping
-
-
-def fetch_sec_submissions(cik: str, timeout_sec: float, user_agent: str) -> Dict[str, Any]:
-    response = httpx.get(
-        f"https://data.sec.gov/submissions/CIK{_normalize_cik(cik)}.json",
-        timeout=timeout_sec,
-        headers={"User-Agent": user_agent},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if not isinstance(payload, dict):
-        raise ValueError("invalid SEC submissions payload")
-    return payload
-
-
-def _build_sec_filing_url(cik: str, accession_number: str) -> str:
-    normalized_cik = str(int(_normalize_cik(cik)))
-    normalized_accession = accession_number.replace("-", "")
-    return (
-        f"https://www.sec.gov/Archives/edgar/data/"
-        f"{normalized_cik}/{normalized_accession}/{accession_number}-index.html"
-    )
-
-
-def build_sec_disclosure_snapshot(
-    stock_symbols: List[str],
-    institution_ciks: List[str],
-    timeout_sec: float,
-    user_agent: str,
-    ticker_map_fetcher: Callable[[float, str], Dict[str, Dict[str, str]]] = fetch_sec_company_tickers,
-    submission_fetcher: Callable[[str, float, str], Dict[str, Any]] = fetch_sec_submissions,
-) -> Dict[str, Any]:
-    institutions_13f: List[Dict[str, str]] = []
-    insiders_form4: List[Dict[str, str]] = []
-
-    for cik in [value for value in institution_ciks if _normalize_cik(value)]:
-        try:
-            submission = submission_fetcher(cik, timeout_sec, user_agent)
-            name = str(submission.get("name", cik)).strip()
-            recent = submission.get("filings", {}).get("recent", {})
-            forms = recent.get("form", []) or []
-            dates = recent.get("filingDate", []) or []
-            accession_numbers = recent.get("accessionNumber", []) or []
-            for form, filing_date, accession_number in zip(forms, dates, accession_numbers):
-                if not str(form).startswith("13F"):
-                    continue
-                institutions_13f.append(
-                    {
-                        "institution": name,
-                        "cik": _normalize_cik(cik),
-                        "form": str(form),
-                        "filing_date": str(filing_date),
-                        "url": _build_sec_filing_url(cik, str(accession_number)),
-                    }
-                )
-                break
-        except Exception as exc:
-            print(f"[tradepulse][sec] 13F fetch failed for CIK={cik}: {str(exc)}")
-
-    ticker_map: Dict[str, Dict[str, str]] = {}
-    if stock_symbols:
-        try:
-            ticker_map = ticker_map_fetcher(timeout_sec, user_agent)
-        except Exception as exc:
-            print(f"[tradepulse][sec] ticker map fetch failed: {str(exc)}")
-
-    for symbol in sorted({value.upper().strip() for value in stock_symbols if value.strip()}):
-        issuer = ticker_map.get(symbol)
-        if not issuer:
-            continue
-        cik = issuer.get("cik", "")
-        if not cik:
-            continue
-        try:
-            submission = submission_fetcher(cik, timeout_sec, user_agent)
-            recent = submission.get("filings", {}).get("recent", {})
-            forms = recent.get("form", []) or []
-            dates = recent.get("filingDate", []) or []
-            accession_numbers = recent.get("accessionNumber", []) or []
-            for form, filing_date, accession_number in zip(forms, dates, accession_numbers):
-                if str(form) not in {"4", "4/A"}:
-                    continue
-                insiders_form4.append(
-                    {
-                        "symbol": symbol,
-                        "issuer": issuer.get("name", symbol),
-                        "cik": cik,
-                        "form": str(form),
-                        "filing_date": str(filing_date),
-                        "url": _build_sec_filing_url(cik, str(accession_number)),
-                    }
-                )
-                break
-        except Exception as exc:
-            print(f"[tradepulse][sec] Form4 fetch failed for {symbol}: {str(exc)}")
-
-    institutions_13f = sorted(institutions_13f, key=lambda item: item.get("filing_date", ""), reverse=True)
-    insiders_form4 = sorted(insiders_form4, key=lambda item: item.get("filing_date", ""), reverse=True)
-    return {
-        "status": "ok",
-        "institutions_13f": institutions_13f[:10],
-        "insiders_form4": insiders_form4[:10],
-    }
+    return list(set(symbols))[:1500]
 
 
 def build_market_regime_snapshot(
@@ -456,7 +310,6 @@ def build_market_regime_snapshot(
     us_price_fetcher: Callable[[str, float], List[float]] = fetch_us_prices,
     us_flow_fetcher: Callable[[str, float], Dict[str, Any]] = fetch_us_flow_metrics,
     a_share_fetcher: Callable[[float], Dict[str, Any]] = fetch_a_share_flow,
-    sec_disclosure_fetcher: Callable[[List[str], List[str], float, str], Dict[str, Any]] = build_sec_disclosure_snapshot,
 ) -> Dict[str, Any]:
     if not options.enabled:
         return {}
@@ -543,16 +396,5 @@ def build_market_regime_snapshot(
             snapshot["a_share"] = {"status": "ok", **ranked_flow}
         except Exception:
             snapshot["a_share"] = {"status": "unavailable", "message": "A股资金流数据暂不可用"}
-
-    if options.sec_enabled:
-        try:
-            snapshot["sec"] = sec_disclosure_fetcher(
-                options.stock_universe,
-                options.sec_13f_ciks,
-                options.request_timeout_sec,
-                options.sec_user_agent,
-            )
-        except Exception:
-            snapshot["sec"] = {"status": "unavailable", "message": "SEC披露数据暂不可用"}
 
     return snapshot
