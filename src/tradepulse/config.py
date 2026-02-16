@@ -114,6 +114,13 @@ def _coerce_bool(value: Optional[str], default: bool) -> bool:
     return default
 
 
+def _coerce_text(value: Optional[str], default: str) -> str:
+    if value is None:
+        return default
+    text = str(value).strip()
+    return text if text else default
+
+
 def _as_bool(value: Any, default: bool) -> bool:
     if isinstance(value, bool):
         return value
@@ -212,8 +219,14 @@ def apply_env_overrides(
             top_n=_coerce_int(env.get("TRADEPULSE_TOP_N"), config.digest.top_n, 1, 50),
         ),
         sources=SourcesConfig(
-            profile=env.get("TRADEPULSE_SOURCE_PROFILE", config.sources.profile),
-            tier=env.get("TRADEPULSE_SOURCE_TIER", config.sources.tier),
+            profile=_coerce_text(
+                env.get("TRADEPULSE_SOURCE_PROFILE"),
+                config.sources.profile,
+            ),
+            tier=_coerce_text(
+                env.get("TRADEPULSE_SOURCE_TIER"),
+                config.sources.tier,
+            ),
             min_health_score=_coerce_int(
                 env.get("TRADEPULSE_MIN_HEALTH_SCORE"),
                 config.sources.min_health_score,
@@ -278,7 +291,10 @@ def apply_env_overrides(
                 env.get("TRADEPULSE_LLM_ENABLED"),
                 config.llm.enabled,
             ),
-            provider=(env.get("TRADEPULSE_LLM_PROVIDER") or config.llm.provider).strip().lower(),
+            provider=_coerce_text(
+                env.get("TRADEPULSE_LLM_PROVIDER"),
+                config.llm.provider,
+            ).lower(),
             detail_top_n=_coerce_int(
                 env.get("TRADEPULSE_LLM_DETAIL_TOP_N"),
                 config.llm.detail_top_n,
@@ -297,14 +313,20 @@ def apply_env_overrides(
                 0.0,
                 2.0,
             ),
-            bailian_model=env.get("TRADEPULSE_BAILIAN_MODEL", config.llm.bailian_model),
-            bailian_base_url=env.get(
-                "TRADEPULSE_BAILIAN_BASE_URL",
+            bailian_model=_coerce_text(
+                env.get("TRADEPULSE_BAILIAN_MODEL"),
+                config.llm.bailian_model,
+            ),
+            bailian_base_url=_coerce_text(
+                env.get("TRADEPULSE_BAILIAN_BASE_URL"),
                 config.llm.bailian_base_url,
             ),
-            gemini_model=env.get("TRADEPULSE_GEMINI_MODEL", config.llm.gemini_model),
-            gemini_base_url=env.get(
-                "TRADEPULSE_GEMINI_BASE_URL",
+            gemini_model=_coerce_text(
+                env.get("TRADEPULSE_GEMINI_MODEL"),
+                config.llm.gemini_model,
+            ),
+            gemini_base_url=_coerce_text(
+                env.get("TRADEPULSE_GEMINI_BASE_URL"),
                 config.llm.gemini_base_url,
             ),
         ),

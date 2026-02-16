@@ -104,3 +104,20 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     assert runtime.llm.temperature == 0.15
     assert runtime.llm.bailian_model == "qwen-max"
     assert runtime.llm.gemini_model == "gemini-2.5-flash"
+
+
+def test_empty_env_values_do_not_override_llm_urls(tmp_path: Path):
+    cfg = tmp_path / "user.yaml"
+    cfg.write_text("sources:\n  profile: trader\n", encoding="utf-8")
+    base = load_user_config(cfg)
+
+    runtime = apply_env_overrides(
+        base,
+        {
+            "TRADEPULSE_BAILIAN_BASE_URL": "",
+            "TRADEPULSE_GEMINI_BASE_URL": "   ",
+        },
+    )
+
+    assert runtime.llm.bailian_base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    assert runtime.llm.gemini_base_url == "https://generativelanguage.googleapis.com/v1beta"
