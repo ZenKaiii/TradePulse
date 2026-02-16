@@ -8,6 +8,7 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
 - 聚合交易相关的高信号新闻/RSS
 - 按重要性排序输出 TopN
 - 支持专题命中（股票/关键词/地缘）作为附加视图，不干扰主排序
+- 支持 Section 4 市场结构（美股板块轮动 + A股资金流）
 - 每条事件都给出：
   - `利好 / 利空 / 中性`
   - 影响股票代码和公司名
@@ -24,9 +25,12 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
 2. 计算信息源健康度并过滤低质量源
 3. 对重复报道进行聚类
 4. 规则打分（重要性 + 方向 + 股票识别）
-5. 生成快报（TopN + 专题层）
-6. SQLite 记录已推送事件，实现增量推送
-7. 按渠道发送消息
+5. 生成市场结构快照：
+   - 美股：11 个 SPDR 行业 ETF 的 `4W/12W` 相对强弱（对比 `SPY + QQQ`）
+   - A股：行业资金净流入/净流出排名
+6. 生成快报（TopN + 专题层 + Section 4）
+7. SQLite 记录已推送事件，实现增量推送
+8. 按渠道发送消息
 
 ## 快速开始
 
@@ -87,6 +91,12 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_KEYWORDS` | 可选 | 关键词专题（逗号分隔） | `fed rate cut,treasury yield` |
 | `TRADEPULSE_GEOPOLITICS` | 可选 | 地缘专题（逗号分隔） | `middle-east,us-china-tech` |
 | `TRADEPULSE_CHANNELS` | 可选 | 启用渠道（逗号分隔） | `dingtalk,telegram` |
+| `TRADEPULSE_MARKET_ENABLED` | 可选 | 是否启用 Section 4 | `true` |
+| `TRADEPULSE_MARKET_US_ENABLED` | 可选 | 是否启用美股板块轮动 | `true` |
+| `TRADEPULSE_MARKET_A_SHARE_ENABLED` | 可选 | 是否启用 A股资金流排名 | `true` |
+| `TRADEPULSE_MARKET_US_TOP_N` | 可选 | 美股领先/落后板块显示行数 | `3` |
+| `TRADEPULSE_MARKET_A_SHARE_TOP_N` | 可选 | A股净流入/净流出显示行数 | `5` |
+| `TRADEPULSE_MARKET_TIMEOUT_SEC` | 可选 | 市场数据请求超时（1-30秒） | `8` |
 
 列表类变量支持逗号或换行分隔。
 
@@ -113,7 +123,13 @@ cp config/user.example.yaml config/user.yaml
 
 1. A. 本小时关键事件 TopN
 2. B. 专题命中（股票 / 关键词 / 地缘）
-3. 每条事件都包含方向、影响标的、影响说明、来源
+3. C. Section 4 板块轮动与资金流（美股/A股）
+4. 每条事件都包含方向、影响标的、影响说明、来源
+
+## Section 4 数据来源
+
+- 美股 ETF 历史数据：Stooq 日线 CSV（`stooq.com`）
+- A股行业资金流：东方财富 push2 行业排行接口（`push2.eastmoney.com`）
 
 ## 运行命令
 

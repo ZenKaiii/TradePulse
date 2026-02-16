@@ -20,3 +20,11 @@ watchlists:
 delivery:
   channels:
     - dingtalk
+
+market_regime:
+  enabled: true
+  us_enabled: true
+  a_share_enabled: true
+  us_top_n: 3
+  a_share_top_n: 5
+  request_timeout_sec: 8

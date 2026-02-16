@@ -24,6 +24,12 @@ Recommended fields in `config/user.yaml`:
 - `watchlists.keywords`
 - `watchlists.geopolitics`
 - `delivery.channels`
+- `market_regime.enabled`
+- `market_regime.us_enabled`
+- `market_regime.a_share_enabled`
+- `market_regime.us_top_n`
+- `market_regime.a_share_top_n`
+- `market_regime.request_timeout_sec`
 
 ## 3. Runtime override model
 
@@ -65,6 +71,12 @@ Schedule:
 - `TRADEPULSE_KEYWORDS`
 - `TRADEPULSE_GEOPOLITICS`
 - `TRADEPULSE_CHANNELS`
+- `TRADEPULSE_MARKET_ENABLED`
+- `TRADEPULSE_MARKET_US_ENABLED`
+- `TRADEPULSE_MARKET_A_SHARE_ENABLED`
+- `TRADEPULSE_MARKET_US_TOP_N`
+- `TRADEPULSE_MARKET_A_SHARE_TOP_N`
+- `TRADEPULSE_MARKET_TIMEOUT_SEC`
 
 List variables support comma or newline separators.
 

@@ -5,6 +5,7 @@ import hashlib
 
 from tradepulse.compose import compose_digest
 from tradepulse.config import apply_env_overrides, load_user_config
+from tradepulse.market import MarketRegimeOptions, build_market_regime_snapshot
 from tradepulse.models import CanonicalArticle
 from tradepulse.notifiers import send_best_effort
 from tradepulse.notifiers.dingtalk import send as send_dingtalk
@@ -129,7 +130,22 @@ def run_once(dry_run: bool = False) -> Dict:
         geopolitics=config.watchlists.geopolitics,
     )
 
-    digest = compose_digest(top_events=top_events, overlays=overlay_hits)
+    market_snapshot = build_market_regime_snapshot(
+        options=MarketRegimeOptions(
+            enabled=config.market_regime.enabled,
+            us_enabled=config.market_regime.us_enabled,
+            a_share_enabled=config.market_regime.a_share_enabled,
+            us_top_n=config.market_regime.us_top_n,
+            a_share_top_n=config.market_regime.a_share_top_n,
+            request_timeout_sec=config.market_regime.request_timeout_sec,
+        )
+    )
+
+    digest = compose_digest(
+        top_events=top_events,
+        overlays=overlay_hits,
+        market_regime=market_snapshot,
+    )
 
     ledger_dir = root / "data"
     ledger_dir.mkdir(parents=True, exist_ok=True)

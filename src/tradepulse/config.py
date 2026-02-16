@@ -30,11 +30,22 @@ class DeliveryConfig:
 
 
 @dataclass
+class MarketRegimeConfig:
+    enabled: bool = True
+    us_enabled: bool = True
+    a_share_enabled: bool = True
+    us_top_n: int = 3
+    a_share_top_n: int = 5
+    request_timeout_sec: float = 8.0
+
+
+@dataclass
 class UserConfig:
     digest: DigestConfig = field(default_factory=DigestConfig)
     sources: SourcesConfig = field(default_factory=SourcesConfig)
     watchlists: WatchlistsConfig = field(default_factory=WatchlistsConfig)
     delivery: DeliveryConfig = field(default_factory=DeliveryConfig)
+    market_regime: MarketRegimeConfig = field(default_factory=MarketRegimeConfig)
 
 
 def _as_dict(value: Any) -> Dict[str, Any]:
@@ -62,6 +73,43 @@ def _coerce_int(
     return max(min_value, min(parsed, max_value))
 
 
+def _coerce_float(
+    value: Optional[str],
+    default: float,
+    min_value: float,
+    max_value: float,
+) -> float:
+    if value is None or value == "":
+        return default
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return default
+    return max(min_value, min(parsed, max_value))
+
+
+def _coerce_bool(value: Optional[str], default: bool) -> bool:
+    if value is None or value == "":
+        return default
+
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _as_bool(value: Any, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return _coerce_bool(value, default)
+    return default
+
+
 def _coerce_csv(value: Optional[str], default: List[str]) -> List[str]:
     if not value:
         return default
@@ -84,6 +132,7 @@ def load_user_config(path: Path) -> UserConfig:
     sources_raw = _as_dict(raw.get("sources"))
     watch_raw = _as_dict(raw.get("watchlists"))
     delivery_raw = _as_dict(raw.get("delivery"))
+    market_raw = _as_dict(raw.get("market_regime"))
 
     top_n = int(digest_raw.get("top_n", 10))
     top_n = max(1, min(top_n, 50))
@@ -103,6 +152,17 @@ def load_user_config(path: Path) -> UserConfig:
             geopolitics=_as_list(watch_raw.get("geopolitics")),
         ),
         delivery=DeliveryConfig(channels=channels),
+        market_regime=MarketRegimeConfig(
+            enabled=_as_bool(market_raw.get("enabled"), True),
+            us_enabled=_as_bool(market_raw.get("us_enabled"), True),
+            a_share_enabled=_as_bool(market_raw.get("a_share_enabled"), True),
+            us_top_n=max(1, min(int(market_raw.get("us_top_n", 3)), 10)),
+            a_share_top_n=max(1, min(int(market_raw.get("a_share_top_n", 5)), 20)),
+            request_timeout_sec=max(
+                1.0,
+                min(float(market_raw.get("request_timeout_sec", 8.0)), 30.0),
+            ),
+        ),
     )
 
 
@@ -144,5 +204,37 @@ def apply_env_overrides(
                     config.delivery.channels,
                 )
             ],
+        ),
+        market_regime=MarketRegimeConfig(
+            enabled=_coerce_bool(
+                env.get("TRADEPULSE_MARKET_ENABLED"),
+                config.market_regime.enabled,
+            ),
+            us_enabled=_coerce_bool(
+                env.get("TRADEPULSE_MARKET_US_ENABLED"),
+                config.market_regime.us_enabled,
+            ),
+            a_share_enabled=_coerce_bool(
+                env.get("TRADEPULSE_MARKET_A_SHARE_ENABLED"),
+                config.market_regime.a_share_enabled,
+            ),
+            us_top_n=_coerce_int(
+                env.get("TRADEPULSE_MARKET_US_TOP_N"),
+                config.market_regime.us_top_n,
+                1,
+                10,
+            ),
+            a_share_top_n=_coerce_int(
+                env.get("TRADEPULSE_MARKET_A_SHARE_TOP_N"),
+                config.market_regime.a_share_top_n,
+                1,
+                20,
+            ),
+            request_timeout_sec=_coerce_float(
+                env.get("TRADEPULSE_MARKET_TIMEOUT_SEC"),
+                config.market_regime.request_timeout_sec,
+                1.0,
+                30.0,
+            ),
         ),
     )

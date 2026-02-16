@@ -11,6 +11,9 @@ def test_default_top_n_is_10(tmp_path: Path):
 
     assert data.digest.top_n == 10
     assert data.sources.tier == "core"
+    assert data.market_regime.enabled is True
+    assert data.market_regime.us_top_n == 3
+    assert data.market_regime.a_share_top_n == 5
 
 
 def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
@@ -29,6 +32,13 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "  geopolitics: [middle-east]\n"
             "delivery:\n"
             "  channels: [dingtalk]\n"
+            "market_regime:\n"
+            "  enabled: true\n"
+            "  us_enabled: true\n"
+            "  a_share_enabled: true\n"
+            "  us_top_n: 3\n"
+            "  a_share_top_n: 5\n"
+            "  request_timeout_sec: 8\n"
         ),
         encoding="utf-8",
     )
@@ -43,6 +53,12 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "TRADEPULSE_KEYWORDS": "fed rate cut, treasury yield",
             "TRADEPULSE_GEOPOLITICS": "taiwan strait",
             "TRADEPULSE_CHANNELS": "telegram,feishu",
+            "TRADEPULSE_MARKET_ENABLED": "false",
+            "TRADEPULSE_MARKET_US_ENABLED": "false",
+            "TRADEPULSE_MARKET_A_SHARE_ENABLED": "true",
+            "TRADEPULSE_MARKET_US_TOP_N": "4",
+            "TRADEPULSE_MARKET_A_SHARE_TOP_N": "6",
+            "TRADEPULSE_MARKET_TIMEOUT_SEC": "12.5",
         },
     )
 
@@ -53,3 +69,9 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     assert runtime.watchlists.keywords == ["fed rate cut", "treasury yield"]
     assert runtime.watchlists.geopolitics == ["taiwan strait"]
     assert runtime.delivery.channels == ["telegram", "feishu"]
+    assert runtime.market_regime.enabled is False
+    assert runtime.market_regime.us_enabled is False
+    assert runtime.market_regime.a_share_enabled is True
+    assert runtime.market_regime.us_top_n == 4
+    assert runtime.market_regime.a_share_top_n == 6
+    assert runtime.market_regime.request_timeout_sec == 12.5

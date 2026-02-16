@@ -10,6 +10,7 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
 - Pull high-signal RSS/news sources for traders
 - Rank events by importance (Top N)
 - Add topic overlays (stocks/keywords/geopolitics) without breaking the main ranking
+- Add market-regime section (US sector rotation + A-share sector flow)
 - Output actionable digest:
   - market direction: `Bullish / Bearish / Neutral`
   - affected tickers and company names
@@ -26,9 +27,12 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
 2. Score feed health and keep healthy sources
 3. Cluster duplicate coverage by URL fingerprint
 4. Rule-score each event (importance + direction + ticker extraction)
-5. Build digest (`TopN + overlays`)
-6. Use SQLite ledger for incremental push
-7. Send to enabled channels
+5. Build market-regime snapshot:
+   - US: 11 SPDR sector ETFs relative strength (`4W/12W` vs `SPY + QQQ`)
+   - A-share: sector inflow/outflow ranking
+6. Build digest (`TopN + overlays + Section 4`)
+7. Use SQLite ledger for incremental push
+8. Send to enabled channels
 
 ## Quick Start
 
@@ -89,6 +93,12 @@ Notes:
 | `TRADEPULSE_KEYWORDS` | Optional | Overlay keywords (comma-separated) | `fed rate cut,treasury yield` |
 | `TRADEPULSE_GEOPOLITICS` | Optional | Overlay geopolitics topics (comma-separated) | `middle-east,us-china-tech` |
 | `TRADEPULSE_CHANNELS` | Optional | Enabled channels (comma-separated) | `dingtalk,telegram` |
+| `TRADEPULSE_MARKET_ENABLED` | Optional | Enable/disable Section 4 | `true` |
+| `TRADEPULSE_MARKET_US_ENABLED` | Optional | Enable US sector rotation | `true` |
+| `TRADEPULSE_MARKET_A_SHARE_ENABLED` | Optional | Enable A-share flow ranking | `true` |
+| `TRADEPULSE_MARKET_US_TOP_N` | Optional | US leaders/laggards row count | `3` |
+| `TRADEPULSE_MARKET_A_SHARE_TOP_N` | Optional | A-share inflow/outflow row count | `5` |
+| `TRADEPULSE_MARKET_TIMEOUT_SEC` | Optional | Market data request timeout (1-30 sec) | `8` |
 
 List-type variables support comma or newline separators.
 
@@ -115,7 +125,13 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 
 1. A. 本小时关键事件 TopN
 2. B. 专题命中（股票 / 关键词 / 地缘）
-3. Each event includes direction, affected stock(s), impact note, and sources
+3. C. Section 4 板块轮动与资金流（US/A-share）
+4. Each event includes direction, affected stock(s), impact note, and sources
+
+## Market Data Sources
+
+- US ETF history: Stooq daily CSV endpoint (`stooq.com`)
+- A-share sector flow: Eastmoney push2 industry ranking endpoint (`push2.eastmoney.com`)
 
 ## Run Commands
 
