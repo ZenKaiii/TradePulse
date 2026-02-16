@@ -7,7 +7,7 @@ import yaml
 
 @dataclass
 class DigestConfig:
-    top_n: int = 10
+    top_n: int = 50
     max_age_hours: int = 72
     max_per_source: int = 3
 
@@ -43,18 +43,6 @@ class MarketRegimeConfig:
     us_market_flow_universe_size: int = 300
     a_share_top_n: int = 5
     request_timeout_sec: float = 8.0
-    sec_enabled: bool = False
-    sec_13f_ciks: List[str] = field(
-        default_factory=lambda: [
-            "0001067983",
-            "0001350694",
-            "0001037389",
-            "0001649339",
-            "0001167483",
-            "0001423053",
-        ]
-    )
-    sec_user_agent: str = "TradePulse/0.1 (contact: tradepulse@example.com)"
 
 
 @dataclass
@@ -68,6 +56,7 @@ class LLMConfig:
     temperature: float = 0.2
     bailian_model: str = "qwen3.5-plus"
     bailian_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    bailian_fallback_model: str = "deepseek-v3.2"
     gemini_model: str = "gemini-3-pro-preview"
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -187,7 +176,7 @@ def load_user_config(path: Path) -> UserConfig:
     llm_raw = _as_dict(raw.get("llm"))
     search_raw = _as_dict(raw.get("search"))
 
-    top_n = max(1, min(int(digest_raw.get("top_n", 10)), 50))
+    top_n = max(1, min(int(digest_raw.get("top_n", 50)), 100))
     max_age_hours = max(1, min(int(digest_raw.get("max_age_hours", 72)), 720))
     max_per_source = max(1, min(int(digest_raw.get("max_per_source", 3)), 10))
 
@@ -223,26 +212,6 @@ def load_user_config(path: Path) -> UserConfig:
             request_timeout_sec=max(
                 1.0,
                 min(float(market_raw.get("request_timeout_sec", 8.0)), 30.0),
-            ),
-            sec_enabled=_as_bool(market_raw.get("sec_enabled"), True),
-            sec_13f_ciks=_as_list(
-                market_raw.get(
-                    "sec_13f_ciks",
-                    [
-                        "0001067983",
-                        "0001350694",
-                        "0001037389",
-                        "0001649339",
-                        "0001167483",
-                        "0001423053",
-                    ],
-                )
-            ),
-            sec_user_agent=str(
-                market_raw.get(
-                    "sec_user_agent",
-                    "TradePulse/0.1 (contact: tradepulse@example.com)",
-                )
             ),
         ),
         llm=LLMConfig(
@@ -285,7 +254,7 @@ def apply_env_overrides(
     env = dict(environ or {})
     return UserConfig(
         digest=DigestConfig(
-            top_n=_coerce_int(env.get("TRADEPULSE_TOP_N"), config.digest.top_n, 1, 50),
+            top_n=_coerce_int(env.get("TRADEPULSE_TOP_N"), config.digest.top_n, 1, 100),
             max_age_hours=_coerce_int(
                 env.get("TRADEPULSE_MAX_AGE_HOURS"),
                 config.digest.max_age_hours,
@@ -387,18 +356,6 @@ def apply_env_overrides(
                 config.market_regime.request_timeout_sec,
                 1.0,
                 30.0,
-            ),
-            sec_enabled=_coerce_bool(
-                env.get("TRADEPULSE_MARKET_SEC_ENABLED"),
-                config.market_regime.sec_enabled,
-            ),
-            sec_13f_ciks=_coerce_csv(
-                env.get("TRADEPULSE_MARKET_SEC_13F_CIKS"),
-                config.market_regime.sec_13f_ciks,
-            ),
-            sec_user_agent=_coerce_text(
-                env.get("TRADEPULSE_SEC_USER_AGENT"),
-                config.market_regime.sec_user_agent,
             ),
         ),
         llm=LLMConfig(

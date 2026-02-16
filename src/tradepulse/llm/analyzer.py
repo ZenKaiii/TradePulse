@@ -159,6 +159,38 @@ def _call_bailian(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
     return str(content)
 
 
+def _call_bailian_fallback(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
+    url = f"{llm_config.bailian_base_url.rstrip('/')}/chat/completions"
+    response = httpx.post(
+        url,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "model": llm_config.bailian_fallback_model,
+            "messages": [
+                {"role": "system", "content": "你是金融新闻分析助手，只输出JSON。"},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": llm_config.temperature,
+            "response_format": {"type": "json_object"},
+        },
+        timeout=llm_config.timeout_sec,
+    )
+    response.raise_for_status()
+    data = response.json()
+    content = data["choices"][0]["message"]["content"]
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for item in content:
+            if isinstance(item, dict):
+                text_parts.append(str(item.get("text", "")))
+            else:
+                text_parts.append(str(item))
+        return "\n".join(part for part in text_parts if part)
+    return str(content)
+
+
 def _call_gemini(prompt: str, llm_config: LLMConfig, api_key: str) -> str:
     url = (
         f"{llm_config.gemini_base_url.rstrip('/')}/models/"
@@ -197,13 +229,19 @@ def generate_event_analysis(
     if provider == "bailian":
         try:
             raw_text = _call_bailian_with_retry(prompt, llm_config, env["BAILIAN_API_KEY"])
-        except Exception:
-            if env.get("GEMINI_API_KEY"):
-                raw_text = _call_gemini_with_retry(prompt, llm_config, env["GEMINI_API_KEY"])
-                final_provider = "gemini"
-                final_model = llm_config.gemini_model
-            else:
-                raise
+        except Exception as primary_exc:
+            print(f"[tradepulse][llm] primary model {llm_config.bailian_model} failed: {str(primary_exc)}, trying fallback model...")
+            try:
+                raw_text = _call_bailian_fallback(prompt, llm_config, env["BAILIAN_API_KEY"])
+                final_model = llm_config.bailian_fallback_model
+                print(f"[tradepulse][llm] fallback model {llm_config.bailian_fallback_model} succeeded")
+            except Exception as fallback_exc:
+                if env.get("GEMINI_API_KEY"):
+                    raw_text = _call_gemini_with_retry(prompt, llm_config, env["GEMINI_API_KEY"])
+                    final_provider = "gemini"
+                    final_model = llm_config.gemini_model
+                else:
+                    raise fallback_exc
     elif provider == "gemini":
         raw_text = _call_gemini_with_retry(prompt, llm_config, env["GEMINI_API_KEY"])
     else:
