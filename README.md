@@ -3,6 +3,8 @@
 TradePulse is an AI-native, importance-first news digest tool for US stock traders.
 It runs hourly (GitHub Actions), outputs Chinese summaries, and always includes source links.
 
+[中文说明](README.zh-CN.md)
+
 ## Features
 
 - Hourly `Top10` key events by importance
@@ -51,3 +53,11 @@ Workflow file: `.github/workflows/hourly.yml`
 1. A. 本小时关键事件 Top10
 2. B. 专题命中（股票/关键词/地缘）
 3. 每条事件包含方向、标的、影响说明、来源
+
+## Source Tiers
+
+- `core`: default high-signal feeds
+- `extended`: `core` + broader coverage
+- `experimental`: `extended` + long-tail experimental feeds
+
+`sources.min_health_score` can be used to ignore low-quality feeds during each run.

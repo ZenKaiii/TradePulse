@@ -3,6 +3,8 @@ digest:
 
 sources:
   profile: trader
+  tier: core
+  min_health_score: 30
 
 watchlists:
   stocks:

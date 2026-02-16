@@ -13,6 +13,8 @@ class DigestConfig:
 @dataclass
 class SourcesConfig:
     profile: str = "trader"
+    tier: str = "core"
+    min_health_score: int = 30
 
 
 @dataclass
@@ -62,7 +64,11 @@ def load_user_config(path: Path) -> UserConfig:
 
     return UserConfig(
         digest=DigestConfig(top_n=top_n),
-        sources=SourcesConfig(profile=str(sources_raw.get("profile", "trader"))),
+        sources=SourcesConfig(
+            profile=str(sources_raw.get("profile", "trader")),
+            tier=str(sources_raw.get("tier", "core")),
+            min_health_score=max(0, min(int(sources_raw.get("min_health_score", 30)), 100)),
+        ),
         watchlists=WatchlistsConfig(
             stocks=_as_list(watch_raw.get("stocks")),
             keywords=_as_list(watch_raw.get("keywords")),

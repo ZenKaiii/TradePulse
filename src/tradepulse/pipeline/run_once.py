@@ -13,7 +13,7 @@ from tradepulse.notifiers.telegram import send as send_telegram
 from tradepulse.overlays import match_overlays
 from tradepulse.pipeline.cluster import cluster_articles
 from tradepulse.pipeline.rule_score import score_cluster
-from tradepulse.sources import fetch_articles_from_feeds
+from tradepulse.sources import fetch_articles_with_health
 from tradepulse.storage import PushLedger
 
 
@@ -80,8 +80,17 @@ def run_once(dry_run: bool = False) -> Dict:
         user_cfg_path = root / "config" / "user.example.yaml"
 
     config = load_user_config(user_cfg_path)
-    fetched_articles = fetch_articles_from_feeds(config.sources.profile)
-    articles = fetched_articles or _sample_articles()
+    fetched_articles, feed_health = fetch_articles_with_health(
+        profile=config.sources.profile,
+        tier=config.sources.tier,
+    )
+    healthy_sources = {
+        record.name
+        for record in feed_health
+        if record.health_score >= config.sources.min_health_score
+    }
+    filtered_articles = [item for item in fetched_articles if item.source_name in healthy_sources]
+    articles = filtered_articles or fetched_articles or _sample_articles()
     clusters = cluster_articles(articles)
 
     scored_events = []
@@ -132,6 +141,8 @@ def run_once(dry_run: bool = False) -> Dict:
     return {
         "digest": digest,
         "stats": {
+            "feed_count": len(feed_health),
+            "healthy_feed_count": len(healthy_sources),
             "total_clusters": len(clusters),
             "top_events": len(top_events),
             "new_events": pushed_count,

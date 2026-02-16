@@ -10,4 +10,4 @@ def test_default_top_n_is_10(tmp_path: Path):
     data = load_user_config(cfg)
 
     assert data.digest.top_n == 10
-
+    assert data.sources.tier == "core"

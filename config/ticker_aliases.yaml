@@ -10,9 +10,116 @@ AAPL:
     - aapl
     - apple
     - 苹果
+MSFT:
+  name: Microsoft
+  aliases:
+    - msft
+    - microsoft
+    - 微软
+AMZN:
+  name: Amazon
+  aliases:
+    - amzn
+    - amazon
+    - 亚马逊
+GOOGL:
+  name: Alphabet
+  aliases:
+    - googl
+    - google
+    - alphabet
+    - 谷歌
+META:
+  name: Meta
+  aliases:
+    - meta
+    - facebook
+    - 脸书
 TSLA:
   name: Tesla
   aliases:
     - tsla
     - tesla
     - 特斯拉
+AMD:
+  name: AMD
+  aliases:
+    - amd
+    - advanced micro devices
+    - 超威
+INTC:
+  name: Intel
+  aliases:
+    - intc
+    - intel
+    - 英特尔
+NFLX:
+  name: Netflix
+  aliases:
+    - nflx
+    - netflix
+    - 奈飞
+PLTR:
+  name: Palantir
+  aliases:
+    - pltr
+    - palantir
+    - 帕兰提尔
+SMCI:
+  name: Super Micro Computer
+  aliases:
+    - smci
+    - super micro
+    - supermicro
+MU:
+  name: Micron
+  aliases:
+    - mu
+    - micron
+    - 美光
+AVGO:
+  name: Broadcom
+  aliases:
+    - avgo
+    - broadcom
+    - 博通
+TSM:
+  name: TSMC
+  aliases:
+    - tsm
+    - tsmc
+    - 台积电
+BABA:
+  name: Alibaba
+  aliases:
+    - baba
+    - alibaba
+    - 阿里巴巴
+PDD:
+  name: PDD
+  aliases:
+    - pdd
+    - 拼多多
+JD:
+  name: JD.com
+  aliases:
+    - jd
+    - jd.com
+    - 京东
+NIO:
+  name: NIO
+  aliases:
+    - nio
+    - 蔚来
+XPEV:
+  name: XPeng
+  aliases:
+    - xpev
+    - xpeng
+    - 小鹏
+LI:
+  name: Li Auto
+  aliases:
+    - li auto
+    - 理想汽车
+    - 理想

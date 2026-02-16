@@ -19,6 +19,8 @@ Edit:
 - `watchlists.keywords`
 - `watchlists.geopolitics`
 - `digest.top_n` (default 10)
+- `sources.tier` (`core` / `extended` / `experimental`)
+- `sources.min_health_score` (0-100)
 - `delivery.channels`
 
 ## 3. Dry Run
