@@ -1,0 +1,20 @@
+digest:
+  top_n: 10
+
+sources:
+  profile: trader
+
+watchlists:
+  stocks:
+    - NVDA
+    - AAPL
+  keywords:
+    - export controls
+    - fed rate cut
+  geopolitics:
+    - middle-east
+    - us-china-tech
+
+delivery:
+  channels:
+    - dingtalk
