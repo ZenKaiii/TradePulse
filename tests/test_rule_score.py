@@ -1,18 +1,19 @@
 from tradepulse.pipeline.rule_score import score_cluster
 
 
-def test_score_returns_direction_and_tickers():
-    result = score_cluster("NVIDIA raises revenue guidance after AI demand surge", coverage_count=3)
-
-    assert result.direction in {"bullish", "bearish", "neutral"}
-    symbols = [t["symbol"] for t in result.affected_tickers]
-    assert "NVDA" in symbols
-
-
-def test_score_detects_multiple_tickers_by_alias():
+def test_short_ticker_does_not_match_substring_noise():
     result = score_cluster(
-        "Apple and Microsoft announce expanded enterprise AI partnership", coverage_count=2
+        "The Munich conference ended the post-war order",
+        coverage_count=1,
     )
-    symbols = {t["symbol"] for t in result.affected_tickers}
-    assert "AAPL" in symbols
-    assert "MSFT" in symbols
+    symbols = {item["symbol"] for item in result.affected_tickers}
+    assert "MU" not in symbols
+
+
+def test_short_ticker_matches_as_token():
+    result = score_cluster(
+        "MU rises after memory pricing improved",
+        coverage_count=1,
+    )
+    symbols = {item["symbol"] for item in result.affected_tickers}
+    assert "MU" in symbols

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List
+import re
 
 import yaml
 
@@ -36,9 +37,23 @@ def _detect_direction(text: str) -> str:
 
 def _detect_tickers(text: str) -> List[Dict[str, str]]:
     found = []
+    lower_text = text.lower()
+
+    def alias_matched(alias: str) -> bool:
+        normalized = alias.strip().lower()
+        if not normalized:
+            return False
+
+        # For alpha-numeric aliases, use token boundaries to avoid substring noise
+        # like "MU" accidentally matching "community".
+        if re.fullmatch(r"[a-z0-9\.\-\s]+", normalized):
+            pattern = rf"(?<![a-z0-9]){re.escape(normalized)}(?![a-z0-9])"
+            return re.search(pattern, lower_text) is not None
+        return normalized in lower_text
+
     for symbol, payload in _TICKER_ALIASES.items():
         aliases = payload.get("aliases", [])
-        if any(alias.lower() in text for alias in aliases):
+        if any(alias_matched(str(alias)) for alias in aliases):
             found.append({"symbol": symbol, "name": payload.get("name", symbol)})
     return found
 

@@ -17,6 +17,8 @@ cp config/user.example.yaml config/user.yaml
 Recommended fields in `config/user.yaml`:
 
 - `digest.top_n`
+- `digest.max_age_hours`
+- `digest.max_per_source`
 - `sources.profile`
 - `sources.tier`
 - `sources.min_health_score`
@@ -73,6 +75,8 @@ Schedule:
 
 - `TRADEPULSE_CONFIG_PATH`
 - `TRADEPULSE_TOP_N`
+- `TRADEPULSE_MAX_AGE_HOURS`
+- `TRADEPULSE_MAX_PER_SOURCE`
 - `TRADEPULSE_SOURCE_PROFILE`
 - `TRADEPULSE_SOURCE_TIER`
 - `TRADEPULSE_MIN_HEALTH_SCORE`
@@ -98,6 +102,11 @@ Schedule:
 
 List variables support comma or newline separators.
 For LLM defaults, TradePulse uses `qwen-plus` (Bailian) and falls back to `gemini-2.0-flash` when configured.
+If `TRADEPULSE_CHANNELS` is empty, channels are auto-detected from configured secrets.
+
+### 4.3 Incremental state persistence
+
+The workflow restores/saves `data/state.db` with Actions cache so dedup state survives hourly runs.
 
 ## 5. Dry run and production run
 

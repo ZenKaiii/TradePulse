@@ -1,5 +1,7 @@
 digest:
   top_n: 10
+  max_age_hours: 72
+  max_per_source: 3
 
 sources:
   profile: trader

@@ -31,12 +31,16 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
    - Top5 detailed Chinese analysis
    - Next5 brief Chinese analysis
    - Bailian primary, Gemini fallback
-6. Build market-regime snapshot:
+6. Event selection guardrails:
+   - incremental-only for Section A (no repeat clusters)
+   - freshness filter (`max_age_hours`)
+   - source cap (`max_per_source`)
+7. Build market-regime snapshot:
    - US: 11 SPDR sector ETFs relative strength (`4W/12W` vs `SPY + QQQ`)
    - A-share: sector inflow/outflow ranking
-7. Build digest (`TopN + overlays + Section 4`)
-8. Use SQLite ledger for incremental push
-9. Send to enabled channels
+8. Build digest (`TopN + overlays + Section 4`)
+9. Use SQLite ledger for incremental push
+10. Send to enabled channels (explicit channels first, else auto-detect from credentials)
 
 ## Quick Start
 
@@ -90,6 +94,8 @@ Notes:
 |---|---|---|---|
 | `TRADEPULSE_CONFIG_PATH` | Optional | Custom config path (repo-relative or absolute) | `config/user.yaml` |
 | `TRADEPULSE_TOP_N` | Optional | Digest Top N (1-50) | `10` |
+| `TRADEPULSE_MAX_AGE_HOURS` | Optional | Keep events newer than this age (hours) | `72` |
+| `TRADEPULSE_MAX_PER_SOURCE` | Optional | Max rows per source in Section A | `3` |
 | `TRADEPULSE_SOURCE_PROFILE` | Optional | Source profile | `trader` |
 | `TRADEPULSE_SOURCE_TIER` | Optional | Source tier (`core/extended/experimental`) | `core` |
 | `TRADEPULSE_MIN_HEALTH_SCORE` | Optional | Feed health filter (0-100) | `30` |
@@ -114,6 +120,11 @@ Notes:
 | `TRADEPULSE_GEMINI_BASE_URL` | Optional | Gemini API base URL | `https://generativelanguage.googleapis.com/v1beta` |
 
 List-type variables support comma or newline separators.
+
+If `TRADEPULSE_CHANNELS` is empty, TradePulse auto-detects channels from credentials:
+- `DINGTALK_WEBHOOK_URL` -> `dingtalk`
+- `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` -> `telegram`
+- `FEISHU_WEBHOOK_URL` -> `feishu`
 
 ### 3) Channel-specific setup
 
@@ -141,6 +152,7 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 2. B. 专题命中（股票 / 关键词 / 地缘）
 3. C. Section 4 板块轮动与资金流（US/A-share）
 4. Each event includes direction, affected stock(s), impact note, and sources
+5. If there is no incremental event in this run, Section A shows a clear “no new key events” message
 
 ## LLM Sources
 
@@ -161,6 +173,10 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 # real run (push to enabled channels)
 .venv/bin/python -m tradepulse.cli run
 ```
+
+## Incremental State in GitHub Actions
+
+`data/state.db` is restored/saved with Actions cache in `.github/workflows/hourly.yml`, so incremental dedup works across hourly runs.
 
 ## Disclaimer
 

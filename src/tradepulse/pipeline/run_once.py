@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import Dict, List
 import os
 import hashlib
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 from tradepulse.compose import compose_digest
 from tradepulse.config import apply_env_overrides, load_user_config
@@ -77,6 +79,62 @@ def _collect_senders(text: str, channels: List[str]):
     return senders
 
 
+def _unique(items: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for item in items:
+        key = item.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(key)
+    return out
+
+
+def resolve_channels(configured_channels: List[str], environ: Dict[str, str] | None = None) -> List[str]:
+    env = dict(environ or os.environ)
+    explicit = str(env.get("TRADEPULSE_CHANNELS", "")).strip()
+    base_channels = _unique(configured_channels)
+
+    # Explicit channel config has highest priority.
+    if explicit:
+        return base_channels
+
+    auto = list(base_channels)
+    if env.get("DINGTALK_WEBHOOK_URL"):
+        auto.append("dingtalk")
+    if env.get("TELEGRAM_BOT_TOKEN") and env.get("TELEGRAM_CHAT_ID"):
+        auto.append("telegram")
+    if env.get("FEISHU_WEBHOOK_URL"):
+        auto.append("feishu")
+    return _unique(auto)
+
+
+def _age_hours(published_at: str, now: datetime) -> float | None:
+    if not published_at:
+        return None
+    try:
+        parsed = parsedate_to_datetime(published_at)
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    delta = now - parsed.astimezone(timezone.utc)
+    return max(delta.total_seconds() / 3600.0, 0.0)
+
+
+def _apply_source_cap(events: List[Dict], max_per_source: int) -> List[Dict]:
+    selected: List[Dict] = []
+    source_counts: Dict[str, int] = {}
+    for event in events:
+        source_name = str(event.get("primary_source", "Unknown"))
+        if source_counts.get(source_name, 0) >= max_per_source:
+            continue
+        source_counts[source_name] = source_counts.get(source_name, 0) + 1
+        selected.append(event)
+    return selected
+
+
 def run_once(dry_run: bool = False) -> Dict:
     root = _project_root()
     config_path_env = os.getenv("TRADEPULSE_CONFIG_PATH", "").strip()
@@ -104,13 +162,24 @@ def run_once(dry_run: bool = False) -> Dict:
     clusters = cluster_articles(articles)
 
     scored_events = []
+    now = datetime.now(timezone.utc)
     for cluster in clusters:
         representative = cluster.articles[0]
         score = score_cluster(representative.title, coverage_count=cluster.coverage_count)
+        age_hours = _age_hours(representative.published_at, now)
+        is_fresh = age_hours is None or age_hours <= float(config.digest.max_age_hours)
+        freshness_bonus = 0.0
+        if age_hours is not None:
+            freshness_bonus = max(
+                0.0,
+                2.5 * (1.0 - min(age_hours / float(config.digest.max_age_hours), 1.0)),
+            )
         scored_events.append(
             {
                 "cluster_id": cluster.cluster_id,
                 "title": representative.title,
+                "primary_source": representative.source_name,
+                "published_at": representative.published_at,
                 "direction": score.direction,
                 "affected_tickers": score.affected_tickers,
                 "impact_reason_zh": "基于事件重要性与市场语义规则推断",
@@ -118,15 +187,32 @@ def run_once(dry_run: bool = False) -> Dict:
                     {"name": item.source_name, "url": item.url} for item in cluster.articles
                 ],
                 "importance_score": score.rule_score,
+                "freshness_bonus": round(freshness_bonus, 2),
+                "event_score": round(score.rule_score + freshness_bonus, 2),
+                "is_fresh": is_fresh,
             }
         )
 
-    scored_events.sort(key=lambda item: item["importance_score"], reverse=True)
-    top_events = scored_events[: config.digest.top_n]
+    scored_events.sort(key=lambda item: item["event_score"], reverse=True)
+    fresh_candidates = [item for item in scored_events if item.get("is_fresh")]
+    candidate_pool = fresh_candidates
+    candidate_pool = _apply_source_cap(candidate_pool, config.digest.max_per_source)
+
+    ledger_dir = root / "data"
+    ledger_dir.mkdir(parents=True, exist_ok=True)
+    ledger = PushLedger(ledger_dir / "state.db")
+
+    top_events = []
+    for event in candidate_pool:
+        if ledger.should_push(event["cluster_id"]):
+            top_events.append(event)
+        if len(top_events) >= config.digest.top_n:
+            break
+
     top_events, analysis_meta = enrich_top_events_with_llm(top_events, config.llm)
 
     overlay_hits = match_overlays(
-        [event["title"] for event in top_events],
+        candidate_pool,
         stocks=config.watchlists.stocks,
         keywords=config.watchlists.keywords,
         geopolitics=config.watchlists.geopolitics,
@@ -150,20 +236,15 @@ def run_once(dry_run: bool = False) -> Dict:
         market_regime=market_snapshot,
     )
 
-    ledger_dir = root / "data"
-    ledger_dir.mkdir(parents=True, exist_ok=True)
-    ledger = PushLedger(ledger_dir / "state.db")
-
-    pushed_count = 0
-    for event in top_events:
-        if ledger.should_push(event["cluster_id"]):
-            if not dry_run:
-                ledger.mark_pushed(event["cluster_id"], "run-once")
-            pushed_count += 1
+    pushed_count = len(top_events)
+    if not dry_run:
+        for event in top_events:
+            ledger.mark_pushed(event["cluster_id"], "run-once")
 
     errors = []
+    channels = resolve_channels(config.delivery.channels)
     if not dry_run:
-        errors = send_best_effort(_collect_senders(digest, config.delivery.channels))
+        errors = send_best_effort(_collect_senders(digest, channels))
 
     return {
         "digest": digest,

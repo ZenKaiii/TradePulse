@@ -29,12 +29,16 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
    - 前5条详细中文分析
    - 后5条简版中文分析
    - 百炼优先，Gemini 备援
-6. 生成市场结构快照：
+6. 事件筛选约束：
+   - A区仅显示增量未推送事件（不重复）
+   - 新鲜度过滤（`max_age_hours`）
+   - 单来源上限（`max_per_source`）
+7. 生成市场结构快照：
    - 美股：11 个 SPDR 行业 ETF 的 `4W/12W` 相对强弱（对比 `SPY + QQQ`）
    - A股：行业资金净流入/净流出排名
-7. 生成快报（TopN + 专题层 + Section 4）
-8. SQLite 记录已推送事件，实现增量推送
-9. 按渠道发送消息
+8. 生成快报（TopN + 专题层 + Section 4）
+9. SQLite 记录已推送事件，实现增量推送
+10. 按渠道发送消息（显式 channels 优先，否则按密钥自动识别）
 
 ## 快速开始
 
@@ -88,6 +92,8 @@ cp config/user.example.yaml config/user.yaml
 |---|---|---|---|
 | `TRADEPULSE_CONFIG_PATH` | 可选 | 自定义配置文件路径（相对仓库或绝对路径） | `config/user.yaml` |
 | `TRADEPULSE_TOP_N` | 可选 | 主摘要 TopN（1-50） | `10` |
+| `TRADEPULSE_MAX_AGE_HOURS` | 可选 | 新闻新鲜度窗口（小时） | `72` |
+| `TRADEPULSE_MAX_PER_SOURCE` | 可选 | A区同一来源最多条数 | `3` |
 | `TRADEPULSE_SOURCE_PROFILE` | 可选 | 信息源 profile | `trader` |
 | `TRADEPULSE_SOURCE_TIER` | 可选 | 信息源层级（`core/extended/experimental`） | `core` |
 | `TRADEPULSE_MIN_HEALTH_SCORE` | 可选 | 信息源健康度阈值（0-100） | `30` |
@@ -112,6 +118,11 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_GEMINI_BASE_URL` | 可选 | Gemini API 地址 | `https://generativelanguage.googleapis.com/v1beta` |
 
 列表类变量支持逗号或换行分隔。
+
+若 `TRADEPULSE_CHANNELS` 为空，系统会按密钥自动识别渠道：
+- 配置了 `DINGTALK_WEBHOOK_URL` -> 自动启用 `dingtalk`
+- 同时配置 `TELEGRAM_BOT_TOKEN` 和 `TELEGRAM_CHAT_ID` -> 自动启用 `telegram`
+- 配置了 `FEISHU_WEBHOOK_URL` -> 自动启用 `feishu`
 
 ### 3）渠道配置要点
 
@@ -139,6 +150,7 @@ cp config/user.example.yaml config/user.yaml
 2. B. 专题命中（股票 / 关键词 / 地缘）
 3. C. Section 4 板块轮动与资金流（美股/A股）
 4. 每条事件都包含方向、影响标的、影响说明、来源
+5. 若本轮无新增事件，A区会明确显示“本小时无新增关键事件”
 
 ## LLM 数据源
 
@@ -159,6 +171,10 @@ cp config/user.example.yaml config/user.yaml
 # 真实推送
 .venv/bin/python -m tradepulse.cli run
 ```
+
+## GitHub Actions 的增量状态
+
+工作流 `.github/workflows/hourly.yml` 会通过 Actions cache 恢复/保存 `data/state.db`，保证跨小时运行也能做增量去重。
 
 ## 免责声明
 

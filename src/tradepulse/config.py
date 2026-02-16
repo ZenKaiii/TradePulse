@@ -8,6 +8,8 @@ import yaml
 @dataclass
 class DigestConfig:
     top_n: int = 10
+    max_age_hours: int = 72
+    max_per_source: int = 3
 
 
 @dataclass
@@ -156,13 +158,18 @@ def load_user_config(path: Path) -> UserConfig:
     market_raw = _as_dict(raw.get("market_regime"))
     llm_raw = _as_dict(raw.get("llm"))
 
-    top_n = int(digest_raw.get("top_n", 10))
-    top_n = max(1, min(top_n, 50))
+    top_n = max(1, min(int(digest_raw.get("top_n", 10)), 50))
+    max_age_hours = max(1, min(int(digest_raw.get("max_age_hours", 72)), 720))
+    max_per_source = max(1, min(int(digest_raw.get("max_per_source", 3)), 10))
 
     channels = _as_list(delivery_raw.get("channels")) or ["dingtalk"]
 
     return UserConfig(
-        digest=DigestConfig(top_n=top_n),
+        digest=DigestConfig(
+            top_n=top_n,
+            max_age_hours=max_age_hours,
+            max_per_source=max_per_source,
+        ),
         sources=SourcesConfig(
             profile=str(sources_raw.get("profile", "trader")),
             tier=str(sources_raw.get("tier", "core")),
@@ -217,6 +224,18 @@ def apply_env_overrides(
     return UserConfig(
         digest=DigestConfig(
             top_n=_coerce_int(env.get("TRADEPULSE_TOP_N"), config.digest.top_n, 1, 50),
+            max_age_hours=_coerce_int(
+                env.get("TRADEPULSE_MAX_AGE_HOURS"),
+                config.digest.max_age_hours,
+                1,
+                720,
+            ),
+            max_per_source=_coerce_int(
+                env.get("TRADEPULSE_MAX_PER_SOURCE"),
+                config.digest.max_per_source,
+                1,
+                10,
+            ),
         ),
         sources=SourcesConfig(
             profile=_coerce_text(

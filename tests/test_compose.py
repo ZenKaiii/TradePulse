@@ -15,7 +15,23 @@ def test_compose_contains_direction_ticker_and_sources():
                 "sources": [{"name": "Reuters", "url": "https://reuters.com/x"}],
             }
         ],
-        overlays={},
+        overlays={
+            "stocks": [
+                {
+                    "topic": "NVDA",
+                    "count": 1,
+                    "items": [
+                        {
+                            "title": "NVIDIA raises guidance",
+                            "source_name": "Reuters",
+                            "url": "https://reuters.com/x",
+                        }
+                    ],
+                }
+            ],
+            "keywords": [],
+            "geopolitics": [],
+        },
         analysis_meta={"provider": "bailian", "model": "qwen-plus"},
         market_regime={
             "us": {
@@ -39,3 +55,14 @@ def test_compose_contains_direction_ticker_and_sources():
     assert "XLK" in digest
     assert "电子" in digest
     assert "🤖" in digest
+    assert "候选观察清单" in digest
+
+
+def test_compose_shows_no_new_message_when_top_events_empty():
+    digest = compose_digest(
+        top_events=[],
+        overlays={"stocks": [], "keywords": [], "geopolitics": []},
+        analysis_meta={"provider": "rule", "model": "rule-engine"},
+        market_regime={},
+    )
+    assert "本小时无新增关键事件" in digest

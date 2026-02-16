@@ -36,9 +36,27 @@ def _format_net_flow(value: float) -> str:
     return f"{value / 100000000.0:+.2f}亿"
 
 
+def _format_overlay_topic_list(values: List[Dict]) -> str:
+    topics = [str(item.get("topic", "")).strip() for item in values if str(item.get("topic", "")).strip()]
+    return ", ".join(topics) if topics else "无"
+
+
+def _append_overlay_details(lines: List[str], label: str, values: List[Dict]) -> None:
+    if not values:
+        return
+    lines.append(f"- {label}命中详情:")
+    for item in values[:3]:
+        topic = item.get("topic", "")
+        lines.append(f"  - `{topic}` 命中 {int(item.get('count', 0))} 条")
+        for hit in item.get("items", [])[:2]:
+            lines.append(
+                f"    - {hit.get('title', 'Untitled')} | {hit.get('source_name', 'Unknown')}"
+            )
+
+
 def compose_digest(
     top_events: List[Dict],
-    overlays: Dict[str, List[str]],
+    overlays: Dict[str, List[Dict]],
     analysis_meta: Optional[Dict] = None,
     market_regime: Optional[Dict] = None,
 ) -> str:
@@ -59,29 +77,35 @@ def compose_digest(
         "## A. 本小时关键事件 Top10（含中文解读）",
     ]
 
-    for index, event in enumerate(top_events, start=1):
-        level = event.get("analysis_level", "brief")
-        level_text = "详细" if level == "detailed" else "简版"
-        summary = event.get("summary_zh") or event.get("title", "暂无")
-        lines.append(f"{index}. 📰 {event.get('title', 'Untitled')}（{level_text}）")
-        lines.append(f"   - 🧠 中文摘要: {summary}")
-        lines.append(f"   - 📈 市场方向: {_map_direction(event.get('direction', 'neutral'))}")
-        lines.append(f"   - 🎯 相关标的: {_format_tickers(event.get('affected_tickers', []))}")
-        lines.append(f"   - 🔍 影响说明: {event.get('impact_reason_zh', '暂无')}")
-        if level == "detailed":
-            lines.append(
-                f"   - 👶 小白解读: {event.get('beginner_note_zh', '可先关注是否影响行业龙头和市场风险偏好')}"
-            )
+    if not top_events:
+        lines.append("- ⏳ 本小时无新增关键事件（已做增量去重）")
+    else:
+        for index, event in enumerate(top_events, start=1):
+            level = event.get("analysis_level", "brief")
+            level_text = "详细" if level == "detailed" else "简版"
+            summary = event.get("summary_zh") or event.get("title", "暂无")
+            lines.append(f"{index}. 📰 {event.get('title', 'Untitled')}（{level_text}）")
+            lines.append(f"   - 🧠 中文摘要: {summary}")
+            lines.append(f"   - 📈 市场方向: {_map_direction(event.get('direction', 'neutral'))}")
+            lines.append(f"   - 🎯 相关标的: {_format_tickers(event.get('affected_tickers', []))}")
+            lines.append(f"   - 🔍 影响说明: {event.get('impact_reason_zh', '暂无')}")
+            if level == "detailed":
+                lines.append(
+                    f"   - 👶 小白解读: {event.get('beginner_note_zh', '可先关注是否影响行业龙头和市场风险偏好')}"
+                )
 
-        for source in event.get("sources", []):
-            lines.append(f"   - 🔗 来源: {source.get('name', 'Unknown')} {source.get('url', '')}")
+            for source in event.get("sources", []):
+                lines.append(f"   - 🔗 来源: {source.get('name', 'Unknown')} {source.get('url', '')}")
 
     lines.append("")
     lines.append("## B. 专题命中（你关注的附加主题）")
     lines.append("- ℹ️ 说明: 专题命中不会改变主线Top10排序，只做额外提醒。")
-    lines.append(f"- 🏷️ 股票专题: {', '.join(overlays.get('stocks', [])) or '无'}")
-    lines.append(f"- 🧷 关键词专题: {', '.join(overlays.get('keywords', [])) or '无'}")
-    lines.append(f"- 🌍 地缘专题: {', '.join(overlays.get('geopolitics', [])) or '无'}")
+    lines.append(f"- 🏷️ 股票专题: {_format_overlay_topic_list(overlays.get('stocks', []))}")
+    lines.append(f"- 🧷 关键词专题: {_format_overlay_topic_list(overlays.get('keywords', []))}")
+    lines.append(f"- 🌍 地缘专题: {_format_overlay_topic_list(overlays.get('geopolitics', []))}")
+    _append_overlay_details(lines, "股票", overlays.get("stocks", []))
+    _append_overlay_details(lines, "关键词", overlays.get("keywords", []))
+    _append_overlay_details(lines, "地缘", overlays.get("geopolitics", []))
 
     if market_regime:
         lines.append("")
@@ -111,6 +135,14 @@ def compose_digest(
                     lines.append(f"    - 代表股: {rep}")
             else:
                 lines.append("- 领先板块: 无")
+
+            if leaders:
+                lines.append("### 美股轮动候选观察清单（非投资建议）")
+                lines.append("- 先看前3强板块，再从对应代表股里找“周线基座 + 日线收紧”的形态。")
+                for item in leaders[:3]:
+                    rep = US_SECTOR_REP_STOCKS.get(item.get("symbol", ""), "代表股待补充")
+                    lines.append(f"- {item.get('symbol', '')} 候选关注: {rep}")
+                lines.append("- 入场前自检: 日线波动收敛、站上9/21或50EMA、止损位清晰（风险收益至少1:3）。")
 
             if laggards:
                 lines.append("- 落后板块:")

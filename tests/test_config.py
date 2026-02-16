@@ -10,6 +10,8 @@ def test_default_top_n_is_10(tmp_path: Path):
     data = load_user_config(cfg)
 
     assert data.digest.top_n == 10
+    assert data.digest.max_age_hours == 72
+    assert data.digest.max_per_source == 3
     assert data.sources.tier == "core"
     assert data.market_regime.enabled is True
     assert data.market_regime.us_top_n == 3
@@ -60,6 +62,8 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
         base,
         {
             "TRADEPULSE_TOP_N": "12",
+            "TRADEPULSE_MAX_AGE_HOURS": "48",
+            "TRADEPULSE_MAX_PER_SOURCE": "2",
             "TRADEPULSE_SOURCE_TIER": "extended",
             "TRADEPULSE_MIN_HEALTH_SCORE": "45",
             "TRADEPULSE_STOCKS": "AAPL,MSFT",
@@ -85,6 +89,8 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     )
 
     assert runtime.digest.top_n == 12
+    assert runtime.digest.max_age_hours == 48
+    assert runtime.digest.max_per_source == 2
     assert runtime.sources.tier == "extended"
     assert runtime.sources.min_health_score == 45
     assert runtime.watchlists.stocks == ["AAPL", "MSFT"]

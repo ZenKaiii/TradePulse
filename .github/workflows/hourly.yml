@@ -12,6 +12,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore TradePulse state
+        uses: actions/cache/restore@v4
+        with:
+          path: data/state.db
+          key: tradepulse-state-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            tradepulse-state-${{ github.ref_name }}-
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -26,6 +34,8 @@ jobs:
         env:
           TRADEPULSE_CONFIG_PATH: ${{ vars.TRADEPULSE_CONFIG_PATH }}
           TRADEPULSE_TOP_N: ${{ vars.TRADEPULSE_TOP_N }}
+          TRADEPULSE_MAX_AGE_HOURS: ${{ vars.TRADEPULSE_MAX_AGE_HOURS }}
+          TRADEPULSE_MAX_PER_SOURCE: ${{ vars.TRADEPULSE_MAX_PER_SOURCE }}
           TRADEPULSE_SOURCE_PROFILE: ${{ vars.TRADEPULSE_SOURCE_PROFILE }}
           TRADEPULSE_SOURCE_TIER: ${{ vars.TRADEPULSE_SOURCE_TIER }}
           TRADEPULSE_MIN_HEALTH_SCORE: ${{ vars.TRADEPULSE_MIN_HEALTH_SCORE }}
@@ -56,3 +66,10 @@ jobs:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
         run: |
           python -m tradepulse.cli run
+
+      - name: Save TradePulse state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/state.db
+          key: tradepulse-state-${{ github.ref_name }}-${{ github.run_id }}
