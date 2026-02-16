@@ -28,3 +28,14 @@ market_regime:
   us_top_n: 3
   a_share_top_n: 5
   request_timeout_sec: 8
+
+llm:
+  enabled: true
+  provider: auto
+  detail_top_n: 5
+  timeout_sec: 20
+  temperature: 0.2
+  bailian_model: qwen-plus
+  bailian_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  gemini_model: gemini-2.0-flash
+  gemini_base_url: https://generativelanguage.googleapis.com/v1beta

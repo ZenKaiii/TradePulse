@@ -24,13 +24,17 @@ TradePulse 是一个面向股票交易者的 AI 新闻聚合与分析工具，�
 1. 按 profile + tier 拉取 RSS 源
 2. 计算信息源健康度并过滤低质量源
 3. 对重复报道进行聚类
-4. 规则打分（重要性 + 方向 + 股票识别）
-5. 生成市场结构快照：
+4. 规则打分（重要性 + 初始方向/股票识别）
+5. LLM 增强解读：
+   - 前5条详细中文分析
+   - 后5条简版中文分析
+   - 百炼优先，Gemini 备援
+6. 生成市场结构快照：
    - 美股：11 个 SPDR 行业 ETF 的 `4W/12W` 相对强弱（对比 `SPY + QQQ`）
    - A股：行业资金净流入/净流出排名
-6. 生成快报（TopN + 专题层 + Section 4）
-7. SQLite 记录已推送事件，实现增量推送
-8. 按渠道发送消息
+7. 生成快报（TopN + 专题层 + Section 4）
+8. SQLite 记录已推送事件，实现增量推送
+9. 按渠道发送消息
 
 ## 快速开始
 
@@ -97,6 +101,15 @@ cp config/user.example.yaml config/user.yaml
 | `TRADEPULSE_MARKET_US_TOP_N` | 可选 | 美股领先/落后板块显示行数 | `3` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | 可选 | A股净流入/净流出显示行数 | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | 可选 | 市场数据请求超时（1-30秒） | `8` |
+| `TRADEPULSE_LLM_ENABLED` | 可选 | 是否启用 LLM 解读 | `true` |
+| `TRADEPULSE_LLM_PROVIDER` | 可选 | `auto/bailian/gemini` | `auto` |
+| `TRADEPULSE_LLM_DETAIL_TOP_N` | 可选 | 详细解读条数 | `5` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | 可选 | LLM 请求超时 | `20` |
+| `TRADEPULSE_LLM_TEMPERATURE` | 可选 | LLM 温度参数 | `0.2` |
+| `TRADEPULSE_BAILIAN_MODEL` | 可选 | 百炼模型名 | `qwen-plus` |
+| `TRADEPULSE_BAILIAN_BASE_URL` | 可选 | 百炼兼容模式地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `TRADEPULSE_GEMINI_MODEL` | 可选 | Gemini 模型名 | `gemini-2.0-flash` |
+| `TRADEPULSE_GEMINI_BASE_URL` | 可选 | Gemini API 地址 | `https://generativelanguage.googleapis.com/v1beta` |
 
 列表类变量支持逗号或换行分隔。
 
@@ -104,6 +117,7 @@ cp config/user.example.yaml config/user.yaml
 
 - 钉钉：
   - 在群里新增自定义机器人，复制 webhook 到 `DINGTALK_WEBHOOK_URL`。
+  - TradePulse 会发送 `msgtype=markdown`，标题/列表会按富文本样式渲染。
 - Telegram：
   - 通过 BotFather 创建机器人并拿到 `TELEGRAM_BOT_TOKEN`。
   - 把机器人拉入目标群/频道。
@@ -121,10 +135,15 @@ cp config/user.example.yaml config/user.yaml
 
 ## 输出结构
 
-1. A. 本小时关键事件 TopN
+1. A. 本小时关键事件 TopN（前5条详细 + 后5条简版，中文AI解读）
 2. B. 专题命中（股票 / 关键词 / 地缘）
 3. C. Section 4 板块轮动与资金流（美股/A股）
 4. 每条事件都包含方向、影响标的、影响说明、来源
+
+## LLM 数据源
+
+- 百炼兼容模式：`https://dashscope.aliyuncs.com/compatible-mode/v1`
+- Gemini API：`https://generativelanguage.googleapis.com/v1beta`
 
 ## Section 4 数据来源
 

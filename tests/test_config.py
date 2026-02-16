@@ -14,6 +14,9 @@ def test_default_top_n_is_10(tmp_path: Path):
     assert data.market_regime.enabled is True
     assert data.market_regime.us_top_n == 3
     assert data.market_regime.a_share_top_n == 5
+    assert data.llm.enabled is True
+    assert data.llm.detail_top_n == 5
+    assert data.llm.bailian_model == "qwen-plus"
 
 
 def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
@@ -39,6 +42,16 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "  us_top_n: 3\n"
             "  a_share_top_n: 5\n"
             "  request_timeout_sec: 8\n"
+            "llm:\n"
+            "  enabled: true\n"
+            "  provider: auto\n"
+            "  detail_top_n: 5\n"
+            "  temperature: 0.2\n"
+            "  timeout_sec: 20\n"
+            "  bailian_model: qwen-plus\n"
+            "  bailian_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1\n"
+            "  gemini_model: gemini-2.0-flash\n"
+            "  gemini_base_url: https://generativelanguage.googleapis.com/v1beta\n"
         ),
         encoding="utf-8",
     )
@@ -59,6 +72,15 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
             "TRADEPULSE_MARKET_US_TOP_N": "4",
             "TRADEPULSE_MARKET_A_SHARE_TOP_N": "6",
             "TRADEPULSE_MARKET_TIMEOUT_SEC": "12.5",
+            "TRADEPULSE_LLM_ENABLED": "true",
+            "TRADEPULSE_LLM_PROVIDER": "bailian",
+            "TRADEPULSE_LLM_DETAIL_TOP_N": "4",
+            "TRADEPULSE_LLM_TIMEOUT_SEC": "25",
+            "TRADEPULSE_LLM_TEMPERATURE": "0.15",
+            "TRADEPULSE_BAILIAN_MODEL": "qwen-max",
+            "TRADEPULSE_BAILIAN_BASE_URL": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "TRADEPULSE_GEMINI_MODEL": "gemini-2.5-flash",
+            "TRADEPULSE_GEMINI_BASE_URL": "https://generativelanguage.googleapis.com/v1beta",
         },
     )
 
@@ -75,3 +97,10 @@ def test_env_overrides_apply_to_runtime_config(tmp_path: Path):
     assert runtime.market_regime.us_top_n == 4
     assert runtime.market_regime.a_share_top_n == 6
     assert runtime.market_regime.request_timeout_sec == 12.5
+    assert runtime.llm.enabled is True
+    assert runtime.llm.provider == "bailian"
+    assert runtime.llm.detail_top_n == 4
+    assert runtime.llm.timeout_sec == 25.0
+    assert runtime.llm.temperature == 0.15
+    assert runtime.llm.bailian_model == "qwen-max"
+    assert runtime.llm.gemini_model == "gemini-2.5-flash"

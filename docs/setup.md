@@ -30,6 +30,15 @@ Recommended fields in `config/user.yaml`:
 - `market_regime.us_top_n`
 - `market_regime.a_share_top_n`
 - `market_regime.request_timeout_sec`
+- `llm.enabled`
+- `llm.provider`
+- `llm.detail_top_n`
+- `llm.timeout_sec`
+- `llm.temperature`
+- `llm.bailian_model`
+- `llm.bailian_base_url`
+- `llm.gemini_model`
+- `llm.gemini_base_url`
 
 ## 3. Runtime override model
 
@@ -77,8 +86,18 @@ Schedule:
 - `TRADEPULSE_MARKET_US_TOP_N`
 - `TRADEPULSE_MARKET_A_SHARE_TOP_N`
 - `TRADEPULSE_MARKET_TIMEOUT_SEC`
+- `TRADEPULSE_LLM_ENABLED`
+- `TRADEPULSE_LLM_PROVIDER`
+- `TRADEPULSE_LLM_DETAIL_TOP_N`
+- `TRADEPULSE_LLM_TIMEOUT_SEC`
+- `TRADEPULSE_LLM_TEMPERATURE`
+- `TRADEPULSE_BAILIAN_MODEL`
+- `TRADEPULSE_BAILIAN_BASE_URL`
+- `TRADEPULSE_GEMINI_MODEL`
+- `TRADEPULSE_GEMINI_BASE_URL`
 
 List variables support comma or newline separators.
+For LLM defaults, TradePulse uses `qwen-plus` (Bailian) and falls back to `gemini-2.0-flash` when configured.
 
 ## 5. Dry run and production run
 

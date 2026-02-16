@@ -40,12 +40,26 @@ class MarketRegimeConfig:
 
 
 @dataclass
+class LLMConfig:
+    enabled: bool = True
+    provider: str = "auto"
+    detail_top_n: int = 5
+    timeout_sec: float = 20.0
+    temperature: float = 0.2
+    bailian_model: str = "qwen-plus"
+    bailian_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    gemini_model: str = "gemini-2.0-flash"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
+
+
+@dataclass
 class UserConfig:
     digest: DigestConfig = field(default_factory=DigestConfig)
     sources: SourcesConfig = field(default_factory=SourcesConfig)
     watchlists: WatchlistsConfig = field(default_factory=WatchlistsConfig)
     delivery: DeliveryConfig = field(default_factory=DeliveryConfig)
     market_regime: MarketRegimeConfig = field(default_factory=MarketRegimeConfig)
+    llm: LLMConfig = field(default_factory=LLMConfig)
 
 
 def _as_dict(value: Any) -> Dict[str, Any]:
@@ -133,6 +147,7 @@ def load_user_config(path: Path) -> UserConfig:
     watch_raw = _as_dict(raw.get("watchlists"))
     delivery_raw = _as_dict(raw.get("delivery"))
     market_raw = _as_dict(raw.get("market_regime"))
+    llm_raw = _as_dict(raw.get("llm"))
 
     top_n = int(digest_raw.get("top_n", 10))
     top_n = max(1, min(top_n, 50))
@@ -161,6 +176,27 @@ def load_user_config(path: Path) -> UserConfig:
             request_timeout_sec=max(
                 1.0,
                 min(float(market_raw.get("request_timeout_sec", 8.0)), 30.0),
+            ),
+        ),
+        llm=LLMConfig(
+            enabled=_as_bool(llm_raw.get("enabled"), True),
+            provider=str(llm_raw.get("provider", "auto")).strip().lower() or "auto",
+            detail_top_n=max(0, min(int(llm_raw.get("detail_top_n", 5)), 20)),
+            timeout_sec=max(1.0, min(float(llm_raw.get("timeout_sec", 20.0)), 90.0)),
+            temperature=max(0.0, min(float(llm_raw.get("temperature", 0.2)), 2.0)),
+            bailian_model=str(llm_raw.get("bailian_model", "qwen-plus")),
+            bailian_base_url=str(
+                llm_raw.get(
+                    "bailian_base_url",
+                    "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                )
+            ),
+            gemini_model=str(llm_raw.get("gemini_model", "gemini-2.0-flash")),
+            gemini_base_url=str(
+                llm_raw.get(
+                    "gemini_base_url",
+                    "https://generativelanguage.googleapis.com/v1beta",
+                )
             ),
         ),
     )
@@ -235,6 +271,41 @@ def apply_env_overrides(
                 config.market_regime.request_timeout_sec,
                 1.0,
                 30.0,
+            ),
+        ),
+        llm=LLMConfig(
+            enabled=_coerce_bool(
+                env.get("TRADEPULSE_LLM_ENABLED"),
+                config.llm.enabled,
+            ),
+            provider=(env.get("TRADEPULSE_LLM_PROVIDER") or config.llm.provider).strip().lower(),
+            detail_top_n=_coerce_int(
+                env.get("TRADEPULSE_LLM_DETAIL_TOP_N"),
+                config.llm.detail_top_n,
+                0,
+                20,
+            ),
+            timeout_sec=_coerce_float(
+                env.get("TRADEPULSE_LLM_TIMEOUT_SEC"),
+                config.llm.timeout_sec,
+                1.0,
+                90.0,
+            ),
+            temperature=_coerce_float(
+                env.get("TRADEPULSE_LLM_TEMPERATURE"),
+                config.llm.temperature,
+                0.0,
+                2.0,
+            ),
+            bailian_model=env.get("TRADEPULSE_BAILIAN_MODEL", config.llm.bailian_model),
+            bailian_base_url=env.get(
+                "TRADEPULSE_BAILIAN_BASE_URL",
+                config.llm.bailian_base_url,
+            ),
+            gemini_model=env.get("TRADEPULSE_GEMINI_MODEL", config.llm.gemini_model),
+            gemini_base_url=env.get(
+                "TRADEPULSE_GEMINI_BASE_URL",
+                config.llm.gemini_base_url,
             ),
         ),
     )

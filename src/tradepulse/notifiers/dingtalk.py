@@ -4,7 +4,13 @@ from tradepulse.notifiers.base import _post_json
 
 
 def build_payload(text: str) -> Dict:
-    return {"msgtype": "text", "text": {"content": text}}
+    return {
+        "msgtype": "markdown",
+        "markdown": {
+            "title": "TradePulse 每小时快报",
+            "text": text,
+        },
+    }
 
 
 def send(webhook_url: str, text: str) -> None:

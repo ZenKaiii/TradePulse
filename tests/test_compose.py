@@ -6,13 +6,17 @@ def test_compose_contains_direction_ticker_and_sources():
         top_events=[
             {
                 "title": "NVIDIA raises guidance",
+                "summary_zh": "英伟达上调指引，AI需求仍强",
                 "direction": "bullish",
                 "affected_tickers": [{"symbol": "NVDA", "name": "NVIDIA"}],
                 "impact_reason_zh": "AI需求超预期",
+                "analysis_level": "detailed",
+                "beginner_note_zh": "可理解为企业盈利预期提升",
                 "sources": [{"name": "Reuters", "url": "https://reuters.com/x"}],
             }
         ],
         overlays={},
+        analysis_meta={"provider": "bailian", "model": "qwen-plus"},
         market_regime={
             "us": {
                 "status": "ok",
@@ -28,8 +32,10 @@ def test_compose_contains_direction_ticker_and_sources():
     )
 
     assert "利好" in digest
+    assert "英伟达上调指引" in digest
     assert "NVDA (NVIDIA)" in digest
     assert "Reuters" in digest
     assert "板块轮动与资金流" in digest
     assert "XLK" in digest
     assert "电子" in digest
+    assert "🤖" in digest

@@ -3,6 +3,7 @@ from tradepulse.pipeline.run_once import _collect_senders, run_once
 
 def test_run_once_returns_digest_and_stats(monkeypatch):
     monkeypatch.setenv("TRADEPULSE_MARKET_ENABLED", "false")
+    monkeypatch.setenv("TRADEPULSE_LLM_ENABLED", "false")
     result = run_once(dry_run=True)
     assert "digest" in result
     assert "stats" in result

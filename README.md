@@ -26,13 +26,17 @@ It runs on GitHub Actions hourly, outputs a Chinese digest, and includes source 
 1. Ingest RSS feeds by profile + tier
 2. Score feed health and keep healthy sources
 3. Cluster duplicate coverage by URL fingerprint
-4. Rule-score each event (importance + direction + ticker extraction)
-5. Build market-regime snapshot:
+4. Rule-score each event (importance + seed direction/ticker)
+5. LLM enrich each top event:
+   - Top5 detailed Chinese analysis
+   - Next5 brief Chinese analysis
+   - Bailian primary, Gemini fallback
+6. Build market-regime snapshot:
    - US: 11 SPDR sector ETFs relative strength (`4W/12W` vs `SPY + QQQ`)
    - A-share: sector inflow/outflow ranking
-6. Build digest (`TopN + overlays + Section 4`)
-7. Use SQLite ledger for incremental push
-8. Send to enabled channels
+7. Build digest (`TopN + overlays + Section 4`)
+8. Use SQLite ledger for incremental push
+9. Send to enabled channels
 
 ## Quick Start
 
@@ -99,6 +103,15 @@ Notes:
 | `TRADEPULSE_MARKET_US_TOP_N` | Optional | US leaders/laggards row count | `3` |
 | `TRADEPULSE_MARKET_A_SHARE_TOP_N` | Optional | A-share inflow/outflow row count | `5` |
 | `TRADEPULSE_MARKET_TIMEOUT_SEC` | Optional | Market data request timeout (1-30 sec) | `8` |
+| `TRADEPULSE_LLM_ENABLED` | Optional | Enable LLM analysis | `true` |
+| `TRADEPULSE_LLM_PROVIDER` | Optional | `auto/bailian/gemini` | `auto` |
+| `TRADEPULSE_LLM_DETAIL_TOP_N` | Optional | Detailed analysis rows | `5` |
+| `TRADEPULSE_LLM_TIMEOUT_SEC` | Optional | LLM request timeout | `20` |
+| `TRADEPULSE_LLM_TEMPERATURE` | Optional | LLM temperature | `0.2` |
+| `TRADEPULSE_BAILIAN_MODEL` | Optional | Bailian model name | `qwen-plus` |
+| `TRADEPULSE_BAILIAN_BASE_URL` | Optional | Bailian OpenAI-compatible base URL | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `TRADEPULSE_GEMINI_MODEL` | Optional | Gemini model name | `gemini-2.0-flash` |
+| `TRADEPULSE_GEMINI_BASE_URL` | Optional | Gemini API base URL | `https://generativelanguage.googleapis.com/v1beta` |
 
 List-type variables support comma or newline separators.
 
@@ -106,6 +119,7 @@ List-type variables support comma or newline separators.
 
 - DingTalk:
   - Create group bot and copy webhook URL to `DINGTALK_WEBHOOK_URL`.
+  - TradePulse sends `msgtype=markdown` so headings/lists are rendered in DingTalk.
 - Telegram:
   - Create bot with BotFather and get token (`TELEGRAM_BOT_TOKEN`).
   - Add bot to target chat/group.
@@ -123,10 +137,15 @@ Use `sources.min_health_score` (or `TRADEPULSE_MIN_HEALTH_SCORE`) to skip low-he
 
 ## Output Format
 
-1. A. 本小时关键事件 TopN
+1. A. 本小时关键事件 TopN（Top5 detailed + next5 brief, Chinese AI explanation）
 2. B. 专题命中（股票 / 关键词 / 地缘）
 3. C. Section 4 板块轮动与资金流（US/A-share）
 4. Each event includes direction, affected stock(s), impact note, and sources
+
+## LLM Sources
+
+- Bailian (OpenAI-compatible): `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- Gemini API: `https://generativelanguage.googleapis.com/v1beta`
 
 ## Market Data Sources
 

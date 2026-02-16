@@ -5,8 +5,9 @@ from tradepulse.notifiers.telegram import build_payload as build_telegram_payloa
 
 def test_dingtalk_payload_contains_text():
     payload = build_dingtalk_payload("hello")
-    assert payload["msgtype"] == "text"
-    assert payload["text"]["content"] == "hello"
+    assert payload["msgtype"] == "markdown"
+    assert payload["markdown"]["title"] == "TradePulse 每小时快报"
+    assert payload["markdown"]["text"] == "hello"
 
 
 def test_telegram_payload_contains_text():

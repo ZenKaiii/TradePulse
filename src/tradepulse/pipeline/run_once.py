@@ -5,6 +5,7 @@ import hashlib
 
 from tradepulse.compose import compose_digest
 from tradepulse.config import apply_env_overrides, load_user_config
+from tradepulse.llm import enrich_top_events_with_llm
 from tradepulse.market import MarketRegimeOptions, build_market_regime_snapshot
 from tradepulse.models import CanonicalArticle
 from tradepulse.notifiers import send_best_effort
@@ -122,6 +123,7 @@ def run_once(dry_run: bool = False) -> Dict:
 
     scored_events.sort(key=lambda item: item["importance_score"], reverse=True)
     top_events = scored_events[: config.digest.top_n]
+    top_events, analysis_meta = enrich_top_events_with_llm(top_events, config.llm)
 
     overlay_hits = match_overlays(
         [event["title"] for event in top_events],
@@ -144,6 +146,7 @@ def run_once(dry_run: bool = False) -> Dict:
     digest = compose_digest(
         top_events=top_events,
         overlays=overlay_hits,
+        analysis_meta=analysis_meta,
         market_regime=market_snapshot,
     )
 
@@ -171,5 +174,7 @@ def run_once(dry_run: bool = False) -> Dict:
             "top_events": len(top_events),
             "new_events": pushed_count,
             "delivery_errors": len(errors),
+            "analysis_provider": analysis_meta.get("provider", "rule"),
+            "analysis_model": analysis_meta.get("model", "rule-engine"),
         },
     }
